@@ -1,0 +1,14 @@
+src/
+tests/
+test-ai-code.ts
+.github/
+.codetrust.yml
+vitest.config.ts
+tsconfig.json
+tsup.config.ts
+eslint.config.js
+.prettierrc
+CodeTrust-Plan.md
+USAGE.md
+*.test.ts
+*.test.js
