@@ -1,6 +1,7 @@
 import { Issue } from '../../types/index.js';
-import { Rule, RuleContext } from '../types.js';
+import { Rule, RuleContext, Fix } from '../types.js';
 import { t } from '../../i18n/index.js';
+import { lineStartOffset } from '../fix-utils.js';
 
 /**
  * Detects loose equality operators (== and !=) that cause implicit type coercion.
@@ -14,6 +15,38 @@ export const typeCoercionRule: Rule = {
   title: 'Loose equality with type coercion',
   description:
     'AI-generated code often uses == instead of ===, leading to implicit type coercion bugs.',
+
+  fixable: true,
+
+  fix(context: RuleContext, issue: Issue): Fix | null {
+    const lines = context.fileContent.split('\n');
+    const lineIndex = issue.startLine - 1;
+    if (lineIndex < 0 || lineIndex >= lines.length) return null;
+
+    const line = lines[lineIndex];
+    const base = lineStartOffset(context.fileContent, issue.startLine);
+
+    // Determine operator from issue message
+    const isNotEqual = issue.message.includes('!=');
+    const searchOp = isNotEqual ? '!=' : '==';
+    const replaceOp = isNotEqual ? '!==' : '===';
+
+    // Find the operator position on this line (skip ===, !==)
+    let pos = -1;
+    for (let j = 0; j < line.length - 1; j++) {
+      if (line[j] === searchOp[0] && line[j + 1] === '=') {
+        // Make sure it's not already === or !==
+        if (line[j + 2] === '=') { j += 2; continue; }
+        // For !=, also check it's not just a single =
+        if (!isNotEqual && j > 0 && (line[j - 1] === '!' || line[j - 1] === '<' || line[j - 1] === '>')) { continue; }
+        pos = j;
+        break;
+      }
+    }
+
+    if (pos === -1) return null;
+    return { range: [base + pos, base + pos + searchOp.length], text: replaceOp };
+  },
 
   check(context: RuleContext): Issue[] {
     const issues: Issue[] = [];

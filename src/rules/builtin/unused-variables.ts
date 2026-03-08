@@ -1,6 +1,7 @@
 import { Issue } from '../../types/index.js';
-import { Rule, RuleContext } from '../types.js';
+import { Rule, RuleContext, Fix } from '../types.js';
 import { t } from '../../i18n/index.js';
+import { lineRange } from '../fix-utils.js';
 import { parseCode, AST_NODE_TYPES } from '../../parsers/ast.js';
 import type { TSESTree } from '../../parsers/ast.js';
 import { walkAST } from '../../parsers/walk.js';
@@ -17,6 +18,25 @@ export const unusedVariablesRule: Rule = {
   title: 'Unused variable detected',
   description:
     'AI-generated code sometimes declares variables that are never used, indicating incomplete or hallucinated logic.',
+
+  fixable: true,
+
+  fix(context: RuleContext, issue: Issue): Fix | null {
+    // Only fix simple single-variable declarations on one line
+    const lines = context.fileContent.split('\n');
+    const lineIndex = issue.startLine - 1;
+    if (lineIndex < 0 || lineIndex >= lines.length) return null;
+
+    const line = lines[lineIndex].trim();
+    // Match: const/let/var varName = ...; (single declaration)
+    if (/^(const|let|var)\s+\w+\s*[=:;]/.test(line) && !line.includes(',')) {
+      const [start, end] = lineRange(context.fileContent, issue.startLine);
+      if (start === end) return null;
+      return { range: [start, end], text: '' };
+    }
+
+    return null;
+  },
 
   check(context: RuleContext): Issue[] {
     const issues: Issue[] = [];

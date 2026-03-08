@@ -57,6 +57,15 @@ codetrust rules list
 
 # Install pre-commit hook
 codetrust hook install
+
+# Auto-fix issues (dry-run by default)
+codetrust fix src/
+
+# Apply fixes
+codetrust fix src/ --apply
+
+# Fix only a specific rule
+codetrust fix src/ --apply --rule logic/type-coercion
 ```
 
 ## Trust Score

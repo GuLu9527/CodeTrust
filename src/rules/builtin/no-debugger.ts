@@ -1,6 +1,7 @@
 import { Issue } from '../../types/index.js';
-import { Rule, RuleContext } from '../types.js';
+import { Rule, RuleContext, Fix } from '../types.js';
 import { t } from '../../i18n/index.js';
+import { lineRange } from '../fix-utils.js';
 
 /**
  * Detects `debugger` statements left in code.
@@ -14,6 +15,14 @@ export const noDebuggerRule: Rule = {
   title: 'Debugger statement',
   description:
     'Debugger statements should never be committed to production code.',
+
+  fixable: true,
+
+  fix(context: RuleContext, issue: Issue): Fix | null {
+    const [start, end] = lineRange(context.fileContent, issue.startLine);
+    if (start === end) return null;
+    return { range: [start, end], text: '' };
+  },
 
   check(context: RuleContext): Issue[] {
     const issues: Issue[] = [];

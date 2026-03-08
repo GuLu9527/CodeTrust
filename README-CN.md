@@ -57,6 +57,15 @@ codetrust rules list
 
 # 安装 pre-commit hook
 codetrust hook install
+
+# 自动修复问题（默认预演模式）
+codetrust fix src/
+
+# 应用修复
+codetrust fix src/ --apply
+
+# 仅修复指定规则
+codetrust fix src/ --apply --rule logic/type-coercion
 ```
 
 ## 信任评分

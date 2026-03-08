@@ -1,6 +1,7 @@
 import { Issue } from '../../types/index.js';
-import { Rule, RuleContext } from '../types.js';
+import { Rule, RuleContext, Fix } from '../types.js';
 import { t } from '../../i18n/index.js';
+import { lineRange } from '../fix-utils.js';
 import { parseCode, AST_NODE_TYPES } from '../../parsers/ast.js';
 import type { TSESTree } from '../../parsers/ast.js';
 import { walkAST } from '../../parsers/walk.js';
@@ -17,6 +18,31 @@ export const unusedImportRule: Rule = {
   title: 'Unused import',
   description:
     'AI-generated code often imports modules or identifiers that are never used in the file.',
+
+  fixable: true,
+
+  fix(context: RuleContext, issue: Issue): Fix | null {
+    // Only fix when the entire import line contains a single specifier.
+    // For multi-specifier imports, return null (too risky to auto-fix).
+    const lines = context.fileContent.split('\n');
+    const lineIndex = issue.startLine - 1;
+    if (lineIndex < 0 || lineIndex >= lines.length) return null;
+
+    const line = lines[lineIndex].trim();
+    // Check if this is a simple single-specifier import line
+    const isSingleDefault = /^import\s+\w+\s+from\s+/.test(line);
+    const isSingleNamed = /^import\s*\{\s*\w+\s*\}\s*from\s+/.test(line);
+    const isSingleTypeNamed = /^import\s+type\s*\{\s*\w+\s*\}\s*from\s+/.test(line);
+    const isSingleTypeDefault = /^import\s+type\s+\w+\s+from\s+/.test(line);
+
+    if (!isSingleDefault && !isSingleNamed && !isSingleTypeNamed && !isSingleTypeDefault) {
+      return null;
+    }
+
+    const [start, end] = lineRange(context.fileContent, issue.startLine);
+    if (start === end) return null;
+    return { range: [start, end], text: '' };
+  },
 
   check(context: RuleContext): Issue[] {
     const issues: Issue[] = [];

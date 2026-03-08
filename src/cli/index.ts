@@ -4,6 +4,7 @@ import { createReportCommand } from './commands/report.js';
 import { createInitCommand } from './commands/init.js';
 import { createRulesCommand } from './commands/rules.js';
 import { createHookCommand } from './commands/hook.js';
+import { createFixCommand } from './commands/fix.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -24,5 +25,6 @@ program.addCommand(createReportCommand());
 program.addCommand(createInitCommand());
 program.addCommand(createRulesCommand());
 program.addCommand(createHookCommand());
+program.addCommand(createFixCommand());
 
 program.parse();
