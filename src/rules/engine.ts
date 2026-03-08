@@ -25,6 +25,8 @@ import { noSelfCompareRule } from './builtin/no-self-compare.js';
 import { noReturnAssignRule } from './builtin/no-return-assign.js';
 import { promiseVoidRule } from './builtin/promise-void.js';
 import { noReassignParamRule } from './builtin/no-reassign-param.js';
+import { noAsyncWithoutAwaitRule } from './builtin/no-async-without-await.js';
+import { noUselessConstructorRule } from './builtin/no-useless-constructor.js';
 
 const BUILTIN_RULES: Rule[] = [
   unnecessaryTryCatchRule,
@@ -51,6 +53,8 @@ const BUILTIN_RULES: Rule[] = [
   noReturnAssignRule,
   promiseVoidRule,
   noReassignParamRule,
+  noAsyncWithoutAwaitRule,
+  noUselessConstructorRule,
 ];
 
 export class RuleEngine {

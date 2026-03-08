@@ -80,7 +80,7 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | >= 50 | LOW TRUST | Needs careful review |
 | < 50 | UNTRUSTED | Should not be merged |
 
-## Built-in Rules (27)
+## Built-in Rules (29)
 
 ### Hallucination Detection (Logic)
 | Rule ID | Severity | Description |
@@ -106,6 +106,8 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | `logic/magic-number` | low | Unexplained numeric literals (magic numbers) |
 | `logic/duplicate-string` | low | Same string literal repeated 3+ times |
 | `logic/no-reassign-param` | low | Reassigning function parameters |
+| `logic/no-async-without-await` | low | Async function that never uses await |
+| `logic/no-useless-constructor` | low | Empty or super-only constructor |
 | `logic/console-in-code` | info | Leftover console.log debug statements |
 
 ### Security Rules

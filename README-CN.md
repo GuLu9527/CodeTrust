@@ -80,7 +80,7 @@ CodeTrust 从五个维度评估代码，加权计算总分（0-100）：
 | >= 50 | ⚠️ 低信任 | 需仔细审查 |
 | < 50 | ❌ 不可信 | 不应合并 |
 
-## 内置规则（27 条）
+## 内置规则（29 条）
 
 ### 幻觉检测（逻辑维度）
 | 规则 ID | 严重度 | 说明 |
@@ -106,6 +106,8 @@ CodeTrust 从五个维度评估代码，加权计算总分（0-100）：
 | `logic/magic-number` | low | 未解释的魔术数字，应提取为命名常量 |
 | `logic/duplicate-string` | low | 相同字符串字面量重复出现 3 次以上 |
 | `logic/no-reassign-param` | low | 重新赋值函数参数 |
+| `logic/no-async-without-await` | low | async 函数内部未使用 await |
+| `logic/no-useless-constructor` | low | 空构造函数或仅调用 super() 的构造函数 |
 | `logic/console-in-code` | info | 遗留的 console.log 调试语句 |
 
 ### 安全规则
