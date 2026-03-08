@@ -26,7 +26,10 @@
     "static-analysis",
     "cli",
     "hallucination-detection",
-    "code-quality"
+    "code-quality",
+    "auto-fix",
+    "codetrust",
+    "linter"
   ],
   "author": "CodeTrust Contributors",
   "repository": {
@@ -45,6 +48,7 @@
     "dist",
     "docs",
     "README.md",
+    "README-CN.md",
     "LICENSE",
     "action.yml"
   ],

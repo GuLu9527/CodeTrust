@@ -19,6 +19,7 @@ CodeTrust is a **fully local** CLI tool designed to verify the quality of AI-gen
 - **Structure Analysis** — Cyclomatic/cognitive complexity, function length, nesting depth, parameter count
 - **Style Consistency** — Mixed naming convention detection (camelCase / snake_case)
 - **Coverage Analysis** — Detect files missing corresponding test files
+- **Auto-fix** — `codetrust fix` automatically fixes safe issues (unused imports, debugger, loose equality, unused variables) with dry-run preview
 - **Five-Dimension Scoring** — Security, Logic, Structure, Style, Coverage, weighted into a trust score (0-100)
 - **Fully Local** — No cloud uploads, zero external requests
 - **Bilingual** — Automatic Chinese/English output based on system locale
@@ -128,6 +129,30 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | `security/no-debugger` | high | Debugger statements left in code |
 | `security/dangerous-html` | medium | innerHTML / dangerouslySetInnerHTML |
 
+## Auto-fix
+
+`codetrust fix` can automatically fix certain safe issues. It runs in **dry-run mode by default** — no files are modified until you pass `--apply`.
+
+### Fixable Rules
+
+| Rule ID | Fix Action |
+|---------|------------|
+| `security/no-debugger` | Delete the `debugger` line |
+| `logic/unused-import` | Delete the unused import line |
+| `logic/type-coercion` | Replace `==` with `===`, `!=` with `!==` |
+| `logic/unused-variables` | Delete the unused variable declaration |
+
+```bash
+# Preview fixes (dry-run, no file changes)
+codetrust fix src/
+
+# Apply fixes to files
+codetrust fix src/ --apply
+
+# Fix only a specific rule
+codetrust fix src/ --apply --rule logic/type-coercion
+```
+
 ## Configuration
 
 Run `codetrust init` to generate `.codetrust.yml`:
@@ -164,7 +189,7 @@ rules:
 
 ## CI/CD Integration
 
-### GitHub Action
+### GitHub Action (Reusable)
 
 ```yaml
 name: CodeTrust
@@ -179,6 +204,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: GuLu9527/CodeTrust@main
+        with:
+          min-score: 70
+```
+
+Or install manually:
+
+```yaml
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
