@@ -80,7 +80,7 @@ CodeTrust 从五个维度评估代码，加权计算总分（0-100）：
 | >= 50 | ⚠️ 低信任 | 需仔细审查 |
 | < 50 | ❌ 不可信 | 不应合并 |
 
-## 内置规则（22 条）
+## 内置规则（27 条）
 
 ### 幻觉检测（逻辑维度）
 | 规则 ID | 严重度 | 说明 |
@@ -95,12 +95,17 @@ CodeTrust 从五个维度评估代码，加权计算总分（0-100）：
 | `logic/duplicate-condition` | medium | if-else 链中重复的条件 |
 | `logic/empty-catch` | medium | 空 catch 块或仅原样 re-throw |
 | `logic/identical-branches` | medium | if/else 两个分支代码完全一样 |
+| `logic/no-non-null-assertion` | medium | 非空断言 (!) 可能导致运行时崩溃 |
+| `logic/no-self-compare` | medium | 自比较 (x === x) 始终为 true/false |
+| `logic/no-return-assign` | medium | return 语句中使用赋值 (=)，可能误用了 === |
+| `logic/promise-void` | medium | 浮动 Promise — async 调用未 await 或 return |
 | `logic/unused-import` | low | 导入了但从未使用的模块 |
 | `logic/over-defensive` | low | 过度的 null/undefined 守卫 |
 | `logic/unused-variables` | low | 声明但未使用的变量 |
 | `logic/redundant-else` | low | return/throw 后不必要的 else |
 | `logic/magic-number` | low | 未解释的魔术数字，应提取为命名常量 |
 | `logic/duplicate-string` | low | 相同字符串字面量重复出现 3 次以上 |
+| `logic/no-reassign-param` | low | 重新赋值函数参数 |
 | `logic/console-in-code` | info | 遗留的 console.log 调试语句 |
 
 ### 安全规则

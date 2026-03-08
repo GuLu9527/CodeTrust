@@ -80,7 +80,7 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | >= 50 | LOW TRUST | Needs careful review |
 | < 50 | UNTRUSTED | Should not be merged |
 
-## Built-in Rules (22)
+## Built-in Rules (27)
 
 ### Hallucination Detection (Logic)
 | Rule ID | Severity | Description |
@@ -95,12 +95,17 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | `logic/duplicate-condition` | medium | Duplicate conditions in if-else chains |
 | `logic/empty-catch` | medium | Empty catch block or rethrow-only catch |
 | `logic/identical-branches` | medium | If/else branches with identical code |
+| `logic/no-non-null-assertion` | medium | Non-null assertion (!) risking runtime crashes |
+| `logic/no-self-compare` | medium | Self-comparison (x === x) always true/false |
+| `logic/no-return-assign` | medium | Assignment (=) in return statement, likely meant === |
+| `logic/promise-void` | medium | Floating promise — async call not awaited or returned |
 | `logic/unused-import` | low | Imported module never used |
 | `logic/over-defensive` | low | Excessive null/undefined guards |
 | `logic/unused-variables` | low | Declared but never used variables |
 | `logic/redundant-else` | low | Unnecessary else after return/throw |
 | `logic/magic-number` | low | Unexplained numeric literals (magic numbers) |
 | `logic/duplicate-string` | low | Same string literal repeated 3+ times |
+| `logic/no-reassign-param` | low | Reassigning function parameters |
 | `logic/console-in-code` | info | Leftover console.log debug statements |
 
 ### Security Rules
