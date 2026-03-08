@@ -80,22 +80,27 @@ CodeTrust 从五个维度评估代码，加权计算总分（0-100）：
 | >= 50 | ⚠️ 低信任 | 需仔细审查 |
 | < 50 | ❌ 不可信 | 不应合并 |
 
-## 内置规则（21 条）
+## 内置规则（22 条）
 
 ### 幻觉检测（逻辑维度）
 | 规则 ID | 严重度 | 说明 |
 |---------|--------|------|
 | `logic/phantom-import` | high | 导入不存在的相对路径模块（AI 幻觉） |
 | `logic/missing-await` | medium | async 函数调用缺少 await |
-| `logic/unused-import` | low | 导入了但从未使用的模块 |
+| `logic/any-type-abuse` | medium | 滥用 `any` 类型绕过类型检查 |
+| `logic/type-coercion` | medium | 宽松等于（`==`）导致隐式类型转换 |
+| `logic/no-nested-ternary` | medium | 嵌套三元表达式降低可读性 |
 | `logic/unnecessary-try-catch` | medium | AI 常生成包裹简单语句的 try-catch |
-| `logic/over-defensive` | low | 过度的 null/undefined 守卫 |
 | `logic/dead-branch` | medium | 始终 true/false 的条件、不可达代码 |
-| `logic/unused-variables` | low | 声明但未使用的变量 |
 | `logic/duplicate-condition` | medium | if-else 链中重复的条件 |
 | `logic/empty-catch` | medium | 空 catch 块或仅原样 re-throw |
 | `logic/identical-branches` | medium | if/else 两个分支代码完全一样 |
+| `logic/unused-import` | low | 导入了但从未使用的模块 |
+| `logic/over-defensive` | low | 过度的 null/undefined 守卫 |
+| `logic/unused-variables` | low | 声明但未使用的变量 |
 | `logic/redundant-else` | low | return/throw 后不必要的 else |
+| `logic/magic-number` | low | 未解释的魔术数字，应提取为命名常量 |
+| `logic/duplicate-string` | low | 相同字符串字面量重复出现 3 次以上 |
 | `logic/console-in-code` | info | 遗留的 console.log 调试语句 |
 
 ### 安全规则
@@ -104,6 +109,7 @@ CodeTrust 从五个维度评估代码，加权计算总分（0-100）：
 | `security/hardcoded-secret` | high | 硬编码的 API 密钥、密码、token |
 | `security/eval-usage` | high | eval()、new Function() 等危险调用 |
 | `security/sql-injection` | high | SQL 查询中的字符串拼接 |
+| `security/no-debugger` | high | 遗留的 debugger 语句 |
 | `security/dangerous-html` | medium | innerHTML / dangerouslySetInnerHTML |
 
 ## 配置

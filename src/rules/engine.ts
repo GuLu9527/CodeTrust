@@ -14,6 +14,12 @@ import { consoleInCodeRule } from './builtin/console-in-code.js';
 import { phantomImportRule } from './builtin/phantom-import.js';
 import { unusedImportRule } from './builtin/unused-import.js';
 import { missingAwaitRule } from './builtin/missing-await.js';
+import { anyTypeAbuseRule } from './builtin/any-type-abuse.js';
+import { typeCoercionRule } from './builtin/type-coercion.js';
+import { magicNumberRule } from './builtin/magic-number.js';
+import { nestedTernaryRule } from './builtin/nested-ternary.js';
+import { duplicateStringRule } from './builtin/duplicate-string.js';
+import { noDebuggerRule } from './builtin/no-debugger.js';
 
 const BUILTIN_RULES: Rule[] = [
   unnecessaryTryCatchRule,
@@ -29,6 +35,12 @@ const BUILTIN_RULES: Rule[] = [
   phantomImportRule,
   unusedImportRule,
   missingAwaitRule,
+  anyTypeAbuseRule,
+  typeCoercionRule,
+  magicNumberRule,
+  nestedTernaryRule,
+  duplicateStringRule,
+  noDebuggerRule,
 ];
 
 export class RuleEngine {

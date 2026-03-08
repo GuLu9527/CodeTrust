@@ -80,22 +80,27 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | >= 50 | LOW TRUST | Needs careful review |
 | < 50 | UNTRUSTED | Should not be merged |
 
-## Built-in Rules (21)
+## Built-in Rules (22)
 
 ### Hallucination Detection (Logic)
 | Rule ID | Severity | Description |
 |---------|----------|-------------|
 | `logic/phantom-import` | high | Import from non-existent relative path (AI hallucination) |
 | `logic/missing-await` | medium | Missing `await` on async function call |
-| `logic/unused-import` | low | Imported module never used |
+| `logic/any-type-abuse` | medium | Excessive `any` type usage bypassing type safety |
+| `logic/type-coercion` | medium | Loose equality (`==`) causing implicit type coercion |
+| `logic/no-nested-ternary` | medium | Nested ternary expressions reducing readability |
 | `logic/unnecessary-try-catch` | medium | Try-catch wrapping simple statements |
-| `logic/over-defensive` | low | Excessive null/undefined guards |
 | `logic/dead-branch` | medium | Always true/false conditions, unreachable code |
-| `logic/unused-variables` | low | Declared but never used variables |
 | `logic/duplicate-condition` | medium | Duplicate conditions in if-else chains |
 | `logic/empty-catch` | medium | Empty catch block or rethrow-only catch |
 | `logic/identical-branches` | medium | If/else branches with identical code |
+| `logic/unused-import` | low | Imported module never used |
+| `logic/over-defensive` | low | Excessive null/undefined guards |
+| `logic/unused-variables` | low | Declared but never used variables |
 | `logic/redundant-else` | low | Unnecessary else after return/throw |
+| `logic/magic-number` | low | Unexplained numeric literals (magic numbers) |
+| `logic/duplicate-string` | low | Same string literal repeated 3+ times |
 | `logic/console-in-code` | info | Leftover console.log debug statements |
 
 ### Security Rules
@@ -104,6 +109,7 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | `security/hardcoded-secret` | high | Hardcoded API keys, passwords, tokens |
 | `security/eval-usage` | high | eval(), new Function() and similar |
 | `security/sql-injection` | high | String concatenation in SQL queries |
+| `security/no-debugger` | high | Debugger statements left in code |
 | `security/dangerous-html` | medium | innerHTML / dangerouslySetInnerHTML |
 
 ## Configuration
