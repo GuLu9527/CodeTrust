@@ -1,13 +1,13 @@
 {
-  "name": "code-trust",
+  "name": "@gulu9527/code-trust",
   "version": "0.1.0",
   "description": "AI code trust verification tool — verify AI-generated code with deterministic algorithms",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "code-trust": "./dist/cli/index.js",
-    "codetrust": "./dist/cli/index.js"
+    "code-trust": "dist/cli/index.js",
+    "codetrust": "dist/cli/index.js"
   },
   "scripts": {
     "build": "tsup",

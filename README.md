@@ -4,7 +4,7 @@
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![npm](https://img.shields.io/npm/v/code-trust)](https://www.npmjs.com/package/code-trust)
+[![npm](https://img.shields.io/npm/v/@gulu9527/code-trust)](https://www.npmjs.com/package/@gulu9527/code-trust)
 
 **English | [中文](./README-CN.md)**
 
@@ -26,7 +26,7 @@ CodeTrust is a **fully local** CLI tool designed to verify the quality of AI-gen
 ## Install
 
 ```bash
-npm install -g code-trust
+npm install -g @gulu9527/code-trust
 ```
 
 Both `code-trust` and `codetrust` commands are available after installation.
@@ -160,8 +160,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install -g code-trust
-      - run: code-trust scan --diff origin/main --min-score 70
+      - run: npm install -g @gulu9527/code-trust
+      - run: codetrust scan --diff origin/main --min-score 70
 ```
 
 ### Git Pre-commit Hook

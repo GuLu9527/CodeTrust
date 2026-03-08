@@ -34,7 +34,7 @@ runs:
 
     - name: Install CodeTrust
       shell: bash
-      run: npm install -g code-trust
+      run: npm install -g @gulu9527/code-trust
 
     - name: Run CodeTrust scan
       shell: bash
