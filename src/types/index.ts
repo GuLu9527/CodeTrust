@@ -1,6 +1,13 @@
 export type Severity = 'high' | 'medium' | 'low' | 'info';
 export type RuleCategory = 'security' | 'logic' | 'structure' | 'style' | 'coverage';
 export type TrustGrade = 'HIGH_TRUST' | 'REVIEW' | 'LOW_TRUST' | 'UNTRUSTED';
+export type ScanMode = 'staged' | 'diff' | 'files' | 'changed';
+export type ScanErrorType =
+  | 'rule-failure'
+  | 'deleted-file'
+  | 'unreadable-file'
+  | 'missing-file-content'
+  | 'unsupported-file-type';
 
 export interface Issue {
   ruleId: string;
@@ -14,21 +21,60 @@ export interface Issue {
   codeSnippet?: string;
 }
 
+export interface ReportIssue extends Issue {
+  fingerprint: string;
+  fingerprintVersion: string;
+}
+
 export interface DimensionScore {
   score: number;
+  issues: ReportIssue[];
+}
+
+export interface RuleFailure {
+  ruleId: string;
+  file: string;
+  message: string;
+}
+
+export interface RuleRunResult {
   issues: Issue[];
+  rulesExecuted: number;
+  rulesFailed: number;
+  ruleFailures: RuleFailure[];
+}
+
+export interface ScanError {
+  type: ScanErrorType;
+  message: string;
+  file?: string;
+  ruleId?: string;
+}
+
+export interface ToolHealth {
+  rulesExecuted: number;
+  rulesFailed: number;
+  filesConsidered: number;
+  filesScanned: number;
+  filesExcluded: number;
+  filesSkipped: number;
+  scanErrors: ScanError[];
+  ruleFailures: RuleFailure[];
 }
 
 export interface TrustReport {
+  schemaVersion: string;
   version: string;
   timestamp: string;
   commit?: string;
+  scanMode: ScanMode;
   overall: {
     score: number;
     grade: TrustGrade;
     filesScanned: number;
     issuesFound: number;
   };
+  toolHealth: ToolHealth;
   dimensions: {
     security: DimensionScore;
     logic: DimensionScore;
@@ -36,7 +82,7 @@ export interface TrustReport {
     style: DimensionScore;
     coverage: DimensionScore;
   };
-  issues: Issue[];
+  issues: ReportIssue[];
 }
 
 export interface DiffFile {

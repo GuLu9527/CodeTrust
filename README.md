@@ -15,7 +15,7 @@ CodeTrust is a **fully local** CLI tool designed to verify the quality of AI-gen
 ## Features
 
 - **Hallucination Detection** — Phantom imports, unused imports, missing `await`, unnecessary try-catch, over-defensive coding, dead logic branches
-- **Security Scanning** — Hardcoded secrets, eval usage, SQL injection, XSS vulnerabilities
+- **Security Scanning** — Hardcoded secrets, eval usage, query-like SQL injection, XSS vulnerabilities
 - **Structure Analysis** — Cyclomatic/cognitive complexity, function length, nesting depth, parameter count
 - **Style Consistency** — Mixed naming convention detection (camelCase / snake_case)
 - **Coverage Analysis** — Detect files missing corresponding test files
@@ -124,8 +124,8 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | Rule ID | Severity | Description |
 |---------|----------|-------------|
 | `security/hardcoded-secret` | high | Hardcoded API keys, passwords, tokens |
-| `security/eval-usage` | high | eval(), new Function() and similar |
-| `security/sql-injection` | high | String concatenation in SQL queries |
+| `security/eval-usage` | high | Executable eval(), new Function() and string-based timers; ignores regex/pattern definitions and plain string mentions |
+| `security/sql-injection` | high | Interpolation or concatenation in query-like SQL construction/execution contexts |
 | `security/no-debugger` | high | Debugger statements left in code |
 | `security/dangerous-html` | medium | innerHTML / dangerouslySetInnerHTML |
 
@@ -186,6 +186,11 @@ rules:
   disabled: []
   overrides: {}
 ```
+
+## Detection Notes
+
+- `security/eval-usage` is intentionally scoped to executable usage. It still flags `eval(...)`, `new Function(...)`, and string-based `setTimeout` / `setInterval`, but it avoids false positives from detector metadata such as `pattern: /.../` and from plain string literals that merely mention `eval(`.
+- `security/sql-injection` requires both SQL keywords and query-like context such as `query`, `sql`, `statement`, `stmt`, or calls like `.query(...)` / `.execute(...)`. This keeps real query construction findings while reducing noise from non-query metadata or fingerprint assembly.
 
 ## CI/CD Integration
 

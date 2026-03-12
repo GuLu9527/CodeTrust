@@ -1059,6 +1059,30 @@ detection:
 
 ## 十、开发路线图
 
+### 2026-03 战略收敛更新
+
+经过新一轮调研，当前阶段的最高优先级不再是继续扩张产品表面，而是先把 CodeTrust 做成一个**让团队敢放进 CI 的可信 trust gate**。
+
+后续开发优先判断标准：
+
+> **这个改动是否会让团队更愿意把 CodeTrust 放进 CI？**
+
+当前优先顺序：
+
+1. 问题指纹（finding fingerprint）
+2. 问题生命周期（baseline / new / existing / fixed / suppressed）
+3. 压制机制与策略控制（suppression / policy）
+4. 工具健康度可见性（规则失败、跳过文件、扫描错误、执行元数据）
+5. 面向 CI 的稳定输出（JSON schema、GitHub Action summary / annotations）
+
+暂时后移的方向：
+
+- 多语言支持
+- MCP Server
+- VS Code 扩展
+- SaaS / Dashboard
+- 模糊的 AI probability 功能
+
 ### Phase 0 — 可运行的 CLI 原型（1 周）✅ 已完成
 
 - [x] 项目初始化（package.json, tsconfig, vitest, eslint, prettier）
@@ -1105,24 +1129,84 @@ detection:
 - [ ] npm 首次发布（待执行 npm publish）
 - [ ] Product Hunt / Hacker News 准备
 
-### Phase 3 — 多语言 + MCP + 扩展能力（2 周）
+### Phase 3 — 可信度地基（当前最高优先级）
+
+目标：先解决“扫描结果是否可信、能否作为 CI 决策依据”的问题。
+
+- [x] 问题指纹（finding fingerprint）
+  - 每个 issue 已输出稳定 `fingerprint` 与 `fingerprintVersion`
+  - 当前实现集中在 scan engine 生成，基于 `ruleId + normalizedFilePath + severity/category + normalized message + location + occurrenceIndex`
+- [x] 工具健康度可见性
+  - 已输出 `rulesExecuted`、`rulesFailed`、`filesConsidered`、`filesScanned`、`filesExcluded`、`filesSkipped`、`scanErrors`
+  - 规则失败不再静默吞掉，而是进入 `toolHealth.ruleFailures` 与 `scanErrors`
+- [x] 高噪音安全误报收敛（self-scan / CI trust gate）
+  - `security/eval-usage` 已避免命中规则文件中的 regex / pattern-definition 文本，以及普通字符串中的 `eval(` 示例
+  - `security/sql-injection` 已要求 query-like 上下文，避免把 fingerprint / metadata 模板字符串误判为 SQL 查询
+- [x] include / exclude 真正生效
+  - staged / diff / files / default 四种模式统一经过同一套过滤逻辑
+  - 已明确区分 `filesExcluded` 与 `filesSkipped`
+- [x] JSON schema v1 固化
+  - 已引入 `schemaVersion`、`scanMode`、`toolHealth`
+  - 保留 `overall`、`dimensions`、`issues` 作为稳定分析结果主体，作为后续 CI / artifact / SARIF 的基础
+- [x] `scan` / `report` 职责收敛
+  - `scan` 作为主即时扫描入口
+  - `report` 当前已收敛为 diff-based 的过渡展示包装器，后续再逐步演进为 artifact / previous result 展示
+
+### Phase 4 — 问题生命周期与策略（CI trust gate 核心）
+
+目标：从“会扫描”升级为“会做可信决策”。
+
+- [ ] baseline / lifecycle
+  - 支持 `new` / `existing` / `fixed` / `suppressed`
+  - 注意：当前 `baseline.ts` 是项目统计基线，不是 CI baseline 系统
+- [ ] suppression 机制
+  - 支持 inline / file / rule / config 级别压制
+  - 建议支持 `reason`、`source`、可选 `expiresAt`
+- [ ] policy 控制
+  - 每类规则支持 `off` / `warn` / `block`
+  - CI 决策不只依赖总分
+- [ ] GitHub Action v2
+  - job summary
+  - changed-line annotations
+  - JSON artifact
+  - `fail-on-new-blocking`
+  - `fail-on-score-below`
+
+### Phase 5 — 生态输出与专业化
+
+目标：补齐生态兼容与专业输出，但建立在前两阶段完成之后。
+
+- [ ] SARIF 输出
+  - 生成稳定 fingerprint / partialFingerprints
+  - 默认不要输出 suppressed findings
+  - 做 GitHub-safe 兼容模式
+- [ ] explain 模式
+  - `codetrust explain <rule-id>`
+  - 解释为什么命中、为什么影响 trust、常见误报、最小修复建议
+- [ ] presets
+  - `recommended`
+  - `strict`
+  - `ci-gate`
+  - `ai-suspicious`
+- [ ] top risk files / top risk dimensions
+- [ ] report / artifact 读取体验完善
+
+### 延后方向（当前不优先）
+
+这些方向仍然有价值，但在 CI trust gate 做稳之前整体后移：
 
 - [ ] MCP Server 实现（@modelcontextprotocol/sdk）
 - [ ] 暴露 4 个 tools: scan, score, explain, suggest_tests
 - [ ] Python 支持（引入 web-tree-sitter WASM，提炼 LanguageAdapter 抽象层）
-- [ ] 测试建议生成（基于模板，不需要 LLM）
-- [ ] AI 代码检测增强（启发式特征分析）
-- [ ] HTML 报告生成
-- [ ] `codetrust fix` 命令（自动修复明显冗余代码，如不必要的 try-catch）
-- [ ] 性能优化（大项目增量扫描）
-
-### Phase 4 — VS Code 扩展 + 增长（1 周）
-
-- [ ] VS Code 扩展（内联显示信任评分 + 问题高亮）
 - [ ] 更多语言支持（Java, Go, Rust）
+- [ ] VS Code 扩展（内联显示信任评分 + 问题高亮）
+- [ ] 测试建议生成（基于模板，不需要 LLM）
+- [ ] HTML 报告生成
+- [ ] AI 代码检测增强（启发式特征分析）
+- [ ] 性能优化（大项目增量扫描）
 - [ ] 项目官网（简单 landing page）
-- [ ] Product Hunt 发布
 - [ ] GitHub 发布 + 社区推广
+- [ ] Product Hunt 发布
 
 ### 未来（v0.2+）
 

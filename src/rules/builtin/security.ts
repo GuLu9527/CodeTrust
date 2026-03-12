@@ -2,6 +2,21 @@ import { Issue } from '../../types/index.js';
 import { Rule, RuleContext } from '../types.js';
 import { t } from '../../i18n/index.js';
 
+const isCommentLine = (trimmed: string): boolean =>
+  trimmed.startsWith('//') || trimmed.startsWith('*');
+
+const stripQuotedStrings = (line: string): string =>
+  line
+    .replace(/'[^'\\]*(?:\\.[^'\\]*)*'/g, "''")
+    .replace(/"[^"\\]*(?:\\.[^"\\]*)*"/g, '""')
+    .replace(/`[^`\\]*(?:\\.[^`\\]*)*`/g, '``');
+
+const isPatternDefinitionLine = (line: string): boolean =>
+  /\bpattern\s*:\s*\/.*\/[dgimsuvy]*/.test(line);
+
+const hasQueryContext = (line: string): boolean =>
+  /\b(query|sql|statement|stmt)\b/i.test(line) || /\.(query|execute|run|prepare)\s*\(/i.test(line);
+
 /**
  * Detects common security issues in code:
  * - Hardcoded secrets/API keys
@@ -24,7 +39,7 @@ export const securityRules: Rule[] = [
 
       const secretPatterns = [
         // API keys / tokens
-        { pattern: /(?:api[_-]?key|apikey)\s*[:=]\s*['"`][A-Za-z0-9_\-]{16,}['"`]/i, label: 'API key' },
+        { pattern: /(?:api[_-]?key|apikey)\s*[:=]\s*['"`][A-Za-z0-9_-]{16,}['"`]/i, label: 'API key' },
         { pattern: /(?:secret|token|password|passwd|pwd)\s*[:=]\s*['"`][^'"`]{8,}['"`]/i, label: 'secret/password' },
         // AWS
         { pattern: /AKIA[0-9A-Z]{16}/, label: 'AWS Access Key' },
@@ -86,18 +101,21 @@ export const securityRules: Rule[] = [
       const lines = context.fileContent.split('\n');
 
       for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-        if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue;
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (isCommentLine(trimmed) || isPatternDefinitionLine(line)) continue;
+
+        const sanitizedLine = stripQuotedStrings(line);
 
         // eval(), new Function(), setTimeout/setInterval with string
         const evalPatterns = [
-          { pattern: /\beval\s*\(/, label: 'eval()' },
-          { pattern: /new\s+Function\s*\(/, label: 'new Function()' },
-          { pattern: /\b(setTimeout|setInterval)\s*\(\s*['"`]/, label: 'setTimeout/setInterval with string' },
+          { pattern: /\beval\s*\(/, label: 'eval()', source: sanitizedLine },
+          { pattern: /new\s+Function\s*\(/, label: 'new Function()', source: sanitizedLine },
+          { pattern: /\b(setTimeout|setInterval)\s*\(\s*['"`]/, label: 'setTimeout/setInterval with string', source: line },
         ];
 
-        for (const { pattern, label } of evalPatterns) {
-          if (pattern.test(lines[i])) {
+        for (const { pattern, label, source } of evalPatterns) {
+          if (pattern.test(source)) {
             issues.push({
               ruleId: 'security/eval-usage',
               severity: 'high',
@@ -134,32 +152,33 @@ export const securityRules: Rule[] = [
       const issues: Issue[] = [];
       const lines = context.fileContent.split('\n');
 
-      for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-        if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue;
+      const sqlKeywords = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\b/i;
 
-        // SQL query with string concatenation or template literal with variable
-        const sqlKeywords = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\b/i;
-        if (sqlKeywords.test(lines[i])) {
-          // Check for string concat or template with variables
-          if (/\$\{[^}]+\}/.test(lines[i]) || /['"]\s*\+\s*\w+/.test(lines[i])) {
-            issues.push({
-              ruleId: 'security/sql-injection',
-              severity: 'high',
-              category: 'security',
-              file: context.filePath,
-              startLine: i + 1,
-              endLine: i + 1,
-              message: t(
-                'Potential SQL injection — string interpolation in SQL query.',
-                '潜在的 SQL 注入 — SQL 查询中使用了字符串插值。',
-              ),
-              suggestion: t(
-                'Use parameterized queries or prepared statements instead.',
-                '请改用参数化查询或预编译语句。',
-              ),
-            });
-          }
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (isCommentLine(trimmed)) continue;
+
+        const hasSqlKeyword = sqlKeywords.test(line);
+        const hasInterpolation = /\$\{[^}]+\}/.test(line) || /['"]\s*\+\s*\w+/.test(line);
+
+        if (hasSqlKeyword && hasInterpolation && hasQueryContext(line)) {
+          issues.push({
+            ruleId: 'security/sql-injection',
+            severity: 'high',
+            category: 'security',
+            file: context.filePath,
+            startLine: i + 1,
+            endLine: i + 1,
+            message: t(
+              'Potential SQL injection — string interpolation in SQL query.',
+              '潜在的 SQL 注入 — SQL 查询中使用了字符串插值。',
+            ),
+            suggestion: t(
+              'Use parameterized queries or prepared statements instead.',
+              '请改用参数化查询或预编译语句。',
+            ),
+          });
         }
       }
 

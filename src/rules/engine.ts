@@ -1,4 +1,4 @@
-import { Issue } from '../types/index.js';
+import { Issue, RuleRunResult } from '../types/index.js';
 import { CodeTrustConfig } from '../types/config.js';
 import { Rule, RuleContext } from './types.js';
 import { unnecessaryTryCatchRule } from './builtin/unnecessary-try-catch.js';
@@ -67,18 +67,37 @@ export class RuleEngine {
   }
 
   run(context: RuleContext): Issue[] {
+    return this.runWithDiagnostics(context).issues;
+  }
+
+  runWithDiagnostics(context: RuleContext): RuleRunResult {
     const allIssues: Issue[] = [];
+    const ruleFailures: RuleRunResult['ruleFailures'] = [];
+    let rulesExecuted = 0;
+    let rulesFailed = 0;
 
     for (const rule of this.rules) {
+      rulesExecuted++;
+
       try {
         const issues = rule.check(context);
         allIssues.push(...issues);
-      } catch (_err) {
-        // Rule execution failed — skip silently for now
+      } catch (err) {
+        rulesFailed++;
+        ruleFailures.push({
+          ruleId: rule.id,
+          file: context.filePath,
+          message: err instanceof Error ? err.message : 'Unknown rule execution failure',
+        });
       }
     }
 
-    return allIssues;
+    return {
+      issues: allIssues,
+      rulesExecuted,
+      rulesFailed,
+      ruleFailures,
+    };
   }
 
   getRules(): Rule[] {

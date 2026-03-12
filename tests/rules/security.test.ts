@@ -63,6 +63,18 @@ describe('security/eval-usage', () => {
     expect(issues.length).toBe(1);
   });
 
+  it('should NOT flag regex pattern-definition text containing eval()', () => {
+    const code = `const detector = { pattern: /\\beval\\s*\\(/, label: 'eval()' };`;
+    const issues = run('security/eval-usage', code);
+    expect(issues.length).toBe(0);
+  });
+
+  it('should NOT flag plain string literals mentioning eval()', () => {
+    const code = `const message = "Avoid eval(userInput) in production";`;
+    const issues = run('security/eval-usage', code);
+    expect(issues.length).toBe(0);
+  });
+
   it('should NOT flag setTimeout with function', () => {
     const code = `setTimeout(() => console.log('hi'), 1000);`;
     const issues = run('security/eval-usage', code);
@@ -83,8 +95,26 @@ describe('security/sql-injection', () => {
     expect(issues.length).toBe(1);
   });
 
+  it('should detect query execution with template literal', () => {
+    const code = 'db.query(`SELECT * FROM users WHERE id = ${userId}`);';
+    const issues = run('security/sql-injection', code);
+    expect(issues.length).toBe(1);
+  });
+
   it('should NOT flag parameterized query', () => {
     const code = `db.query("SELECT * FROM users WHERE id = ?", [userId]);`;
+    const issues = run('security/sql-injection', code);
+    expect(issues.length).toBe(0);
+  });
+
+  it('should NOT flag non-query fingerprint metadata assembly', () => {
+    const code = 'const fingerprintSeed = `SELECT|${ruleId}|${file}|${startLine}`;';
+    const issues = run('security/sql-injection', code);
+    expect(issues.length).toBe(0);
+  });
+
+  it('should NOT flag prose strings with SQL keywords and interpolation', () => {
+    const code = 'const message = `Use SELECT with ${tableName} carefully in docs`;';
     const issues = run('security/sql-injection', code);
     expect(issues.length).toBe(0);
   });
