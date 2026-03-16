@@ -44,4 +44,17 @@ describe('logic/duplicate-string', () => {
     const issues = run(code);
     expect(issues.length).toBe(0);
   });
+
+  it('should ignore repeated severity and category literals', () => {
+    const code = [
+      'const a = "medium";',
+      'const b = "medium";',
+      'const c = "medium";',
+      'const d = "logic";',
+      'const e = "logic";',
+      'const f = "logic";',
+    ].join('\n');
+    const issues = run(code);
+    expect(issues.length).toBe(0);
+  });
 });

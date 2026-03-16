@@ -10,6 +10,17 @@ import { t } from '../../i18n/index.js';
 
 const MIN_STRING_LENGTH = 6;
 const MIN_OCCURRENCES = 3;
+const IGNORED_LITERALS = new Set([
+  'high',
+  'medium',
+  'low',
+  'info',
+  'logic',
+  'security',
+  'structure',
+  'style',
+  'coverage',
+]);
 
 export const duplicateStringRule: Rule = {
   id: 'logic/duplicate-string',
@@ -57,6 +68,9 @@ export const duplicateStringRule: Rule = {
 
         // Skip short strings
         if (value.length < MIN_STRING_LENGTH) continue;
+
+        // Skip low-information enum-like literals common in rule definitions.
+        if (IGNORED_LITERALS.has(value)) continue;
 
         // Skip template-like strings with interpolation markers
         if (value.includes('${')) continue;

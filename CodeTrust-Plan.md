@@ -1131,7 +1131,7 @@ detection:
 
 ### Phase 3 — 可信度地基（当前最高优先级）
 
-目标：先解决“扫描结果是否可信、能否作为 CI 决策依据”的问题。
+目标：先解决”扫描结果是否可信、能否作为 CI 决策依据”的问题。
 
 - [x] 问题指纹（finding fingerprint）
   - 每个 issue 已输出稳定 `fingerprint` 与 `fingerprintVersion`
@@ -1151,13 +1151,65 @@ detection:
 - [x] `scan` / `report` 职责收敛
   - `scan` 作为主即时扫描入口
   - `report` 当前已收敛为 diff-based 的过渡展示包装器，后续再逐步演进为 artifact / previous result 展示
+- [x] 自检问题修复
+  - 修复了 changed-mode 重复扫描同一文件的问题（`src/parsers/diff.ts`）
+  - 修复了嵌套函数指标重复计算问题（`src/parsers/ast.ts`）
+  - 修复了 duplicate-condition 假阳性（CallExpression 参数未包含）
+  - 修复了 missing-await 假阳性（Promise.all(map()) 模式）
+  - 修复了 dead-branch 假阳性（isRuleCategory 布尔表达式）
+  - 修复了 promise-void 假阳性（同步方法白名单）
+  - 修复了 XSS 误报（规则自检问题）
+  - 修复了 magic-number / duplicate-string（提取常量）
+  - 修复了 no-async-without-await（移除不必要的 async）
+  - 修复了 parseBaselineIssue 高复杂度（提取辅助函数）
+  - 新增 `tests/parsers/diff.test.ts` 覆盖重复文件去重场景
+  - 新增嵌套函数结构指标回归测试
+  - 新增 FixEngine 行为测试（dry-run/apply/conflict/iteration）
+
+### Phase 3.5 — 假阳性修复（确保扫描结果可信）
+
+目标：修复自检发现的假阳性问题，提升扫描结果可信度。
+
+#### 第一梯队：必须修复（影响信任评分准确性）✅ 已完成
+
+| 问题 | 规则 | 位置 | 修复方案 | 状态 |
+|------|------|------|----------|------|
+| 重复条件假阳性 | `duplicate-condition` | `engine.ts:230` | 检查不同条件（`'+'` vs `'-'`）不是重复 | ✅ 已修复 |
+| 重复条件假阳性 | `duplicate-condition` | `diff.ts:115-128` | if-else-if 链中不同条件不是重复 | ✅ 已修复 |
+| Missing-await 假阳性 | `missing-await` | `engine.ts:104` | `Promise.all(map())` 是正确的异步模式 | ✅ 已修复 |
+| 不可达代码假阳性 | `dead-branch` | `engine.ts:542` | `isRuleCategory` 是正常的布尔表达式返回 | ✅ 已修复 |
+| 浮动 Promise 假阳性 | `promise-void` | `ast.ts:31` | `_astCache.delete()` 是同步方法 | ✅ 已修复 |
+
+#### 第二梯队：应该修复（影响代码可维护性）
+
+| 问题 | 规则 | 位置 | 修复方案 | 状态 |
+|------|------|------|----------|------|
+| 嵌套三元表达式 | `no-nested-ternary` | `terminal.ts:93` | 重构为 if-else 或查找对象 | ⏳ 待处理 |
+| 函数过长 | `long-function` | `engine.ts:scanFile` (112行) | 拆分为更小单元 | ⚠️ 部分完成 |
+| 函数过长 | `long-function` | `terminal.ts:renderTerminalReport` (107行) | 拆分职责 | ⏳ 待处理 |
+| 函数过长 | `long-function` | `duplicate-string.ts` (86行) | 拆分辅助函数 | ⏳ 待处理 |
+| 函数过长 | `long-function` | `magic-number.ts` (84行) | 拆分辅助函数 | ⏳ 待处理 |
+
+#### 第三梯队：可以修复 ✅ 已完成
+
+| 问题 | 规则 | 位置 | 修复方案 | 状态 |
+|------|------|------|----------|------|
+| XSS 误报 | `dangerous-html` | `security.ts:209` | cleaned 变量添加正则模式替换 | ✅ 已修复 |
+| Magic number | `magic-number` | `diff.ts` | 提取 `SHORT_HASH_LENGTH = 7` | ✅ 已修复 |
+| 重复字符串 | `duplicate-string` | `diff.ts` | 提取 `GIT_DIFF_UNIFIED = '--unified=3'` | ✅ 已修复 |
+| no-async-without-await | `no-async-without-await` | `engine.ts:310` | 移除不必要的 async 关键字 | ✅ 已修复 |
+| parseBaselineIssue 复杂度 | `high-complexity` | `engine.ts:439` | 提取 `isValidBaselineIssue` 辅助函数 | ✅ 已修复 |
+
+> **注意**：第二梯队（函数过长）问题部分属于自举问题，即规则文件本身包含检测模式的字符串。这是自举工具的固有现象，可接受或通过调整阈值处理。
 
 ### Phase 4 — 问题生命周期与策略（CI trust gate 核心）
 
 目标：从“会扫描”升级为“会做可信决策”。
 
 - [ ] baseline / lifecycle
-  - 支持 `new` / `existing` / `fixed` / `suppressed`
+  - [x] v1: `scan --baseline <path>` 支持 `new` / `existing` / `fixed`
+  - [ ] 后续补 `suppressed`
+  - v1 复用现有 JSON report artifact 作为 baseline 输入
   - 注意：当前 `baseline.ts` 是项目统计基线，不是 CI baseline 系统
 - [ ] suppression 机制
   - 支持 inline / file / rule / config 级别压制

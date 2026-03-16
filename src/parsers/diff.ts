@@ -1,6 +1,9 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import { DiffFile, DiffHunk } from '../types/index.js';
 
+const GIT_DIFF_UNIFIED = '--unified=3';
+const SHORT_HASH_LENGTH = 7;
+
 export class DiffParser {
   private git: SimpleGit;
 
@@ -9,31 +12,70 @@ export class DiffParser {
   }
 
   async getStagedFiles(): Promise<DiffFile[]> {
-    const diffDetail = await this.git.diff(['--cached', '--unified=3']);
+    const diffDetail = await this.git.diff(['--cached', GIT_DIFF_UNIFIED]);
     return this.parseDiffOutput(diffDetail);
   }
 
   async getDiffFromRef(ref: string): Promise<DiffFile[]> {
-    const diffDetail = await this.git.diff([ref, '--unified=3']);
+    const diffDetail = await this.git.diff([ref, GIT_DIFF_UNIFIED]);
     return this.parseDiffOutput(diffDetail);
   }
 
   async getChangedFiles(): Promise<DiffFile[]> {
-    const diffDetail = await this.git.diff(['--unified=3']);
-    const stagedDetail = await this.git.diff(['--cached', '--unified=3']);
-    const allDiff = diffDetail + '\n' + stagedDetail;
-    return this.parseDiffOutput(allDiff);
+    const diffDetail = await this.git.diff([GIT_DIFF_UNIFIED]);
+    const stagedDetail = await this.git.diff(['--cached', GIT_DIFF_UNIFIED]);
+
+    // Parse unstaged and staged diffs separately, then merge to avoid duplicates
+    const unstagedFiles = this.parseDiffOutput(diffDetail);
+    const stagedFiles = this.parseDiffOutput(stagedDetail);
+
+    return this.mergeDiffFiles(unstagedFiles, stagedFiles);
+  }
+
+  /**
+   * Merge two sets of diff files, deduplicating by file path.
+   * When a file appears in both, merge their hunks and combine stats.
+   */
+  private mergeDiffFiles(unstaged: DiffFile[], staged: DiffFile[]): DiffFile[] {
+    const fileMap = new Map<string, DiffFile>();
+
+    // Add unstaged files first
+    for (const file of unstaged) {
+      fileMap.set(file.filePath, file);
+    }
+
+    // Merge or add staged files
+    for (const file of staged) {
+      const existing = fileMap.get(file.filePath);
+      if (existing) {
+        // File exists in both: merge hunks and combine stats
+        fileMap.set(file.filePath, {
+          ...existing,
+          // Combine additions/deletions
+          additions: existing.additions + file.additions,
+          deletions: existing.deletions + file.deletions,
+          // Merge hunks (preserve order: staged first, then unstaged)
+          hunks: [...file.hunks, ...existing.hunks],
+          // Status: if either is 'added', treat as added; otherwise keep modified
+          status: existing.status === 'added' || file.status === 'added' ? 'added' : 'modified',
+        });
+      } else {
+        fileMap.set(file.filePath, file);
+      }
+    }
+
+    return Array.from(fileMap.values());
   }
 
   async getLastCommitDiff(): Promise<DiffFile[]> {
-    const diffDetail = await this.git.diff(['HEAD~1', 'HEAD', '--unified=3']);
+    const diffDetail = await this.git.diff(['HEAD~1', 'HEAD', GIT_DIFF_UNIFIED]);
     return this.parseDiffOutput(diffDetail);
   }
 
   async getCurrentCommitHash(): Promise<string | undefined> {
     try {
       const hash = await this.git.revparse(['HEAD']);
-      return hash.trim().slice(0, 7);
+      return hash.trim().slice(0, SHORT_HASH_LENGTH);
     } catch {
       return undefined;
     }

@@ -11,6 +11,8 @@ export function renderJsonReport(report: TrustReport): string {
     toolHealth: report.toolHealth,
     dimensions: report.dimensions,
     issues: report.issues,
+    lifecycle: report.lifecycle,
+    fixedIssues: report.fixedIssues,
   };
 
   return JSON.stringify(payload, null, 2);

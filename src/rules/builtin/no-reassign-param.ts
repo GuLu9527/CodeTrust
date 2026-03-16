@@ -69,12 +69,10 @@ export const noReassignParamRule: Rule = {
       if (paramNames.size === 0) return;
 
       // Get function body
-      let body: TSESTree.Node | null = null;
-      if (node.type === AST_NODE_TYPES.MethodDefinition) {
-        body = (node as TSESTree.MethodDefinition).value;
-      } else {
-        body = node;
-      }
+      const body: TSESTree.Node | null =
+        node.type === AST_NODE_TYPES.MethodDefinition
+          ? (node as TSESTree.MethodDefinition).value
+          : node;
       if (!body || !('body' in body)) return;
 
       // Walk the function body to find assignments to parameters

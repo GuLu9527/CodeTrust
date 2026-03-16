@@ -68,12 +68,22 @@ export const promiseVoidRule: Rule = {
       /^save/,
       /^load/,
       /^send/,
-      /^delete/,
       /^update/,
       /^create/,
       /^connect/,
       /^disconnect/,
       /^init/,
+    ];
+
+    // Known synchronous methods that should NOT be flagged as async
+    const syncMethods = [
+      'delete', // Map.delete(), Set.delete(), Object.delete() are synchronous
+      'has',    // Map.has(), Set.has() are synchronous
+      'get',    // Map.get() is synchronous
+      'set',    // Map.set() is synchronous (though some consider it potentially async)
+      'keys',   // Object.keys() is synchronous
+      'values', // Object.values() is synchronous
+      'entries', // Object.entries() is synchronous
     ];
 
     // Second pass: find expression statements that call async functions
@@ -94,6 +104,9 @@ export const promiseVoidRule: Rule = {
       // Also check for .then() chains — these are definitely promises
       // Method calls ending in common promise-producing names
       const endsWithAsync = fnName.endsWith('Async') || fnName.endsWith('async');
+
+      // Skip known synchronous methods
+      if (syncMethods.includes(fnName)) return;
 
       if (!isKnownAsync && !matchesPattern && !endsWithAsync) return;
 

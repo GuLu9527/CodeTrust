@@ -21,9 +21,33 @@ export interface Issue {
   codeSnippet?: string;
 }
 
+export type IssueLifecycleStatus = 'new' | 'existing';
+
 export interface ReportIssue extends Issue {
   fingerprint: string;
   fingerprintVersion: string;
+  lifecycle?: IssueLifecycleStatus;
+}
+
+export interface FixedIssue {
+  ruleId: string;
+  severity: Severity;
+  category: RuleCategory;
+  file: string;
+  startLine: number;
+  endLine: number;
+  message: string;
+  fingerprint: string;
+  fingerprintVersion?: string;
+}
+
+export interface LifecycleSummary {
+  newIssues: number;
+  existingIssues: number;
+  fixedIssues: number;
+  baselineUsed: boolean;
+  baselineCommit?: string;
+  baselineTimestamp?: string;
 }
 
 export interface DimensionScore {
@@ -83,6 +107,8 @@ export interface TrustReport {
     coverage: DimensionScore;
   };
   issues: ReportIssue[];
+  lifecycle?: LifecycleSummary;
+  fixedIssues?: FixedIssue[];
 }
 
 export interface DiffFile {
@@ -107,5 +133,6 @@ export interface ScanOptions {
   diff?: string;
   files?: string[];
   minScore?: number;
+  baseline?: string;
   format?: 'terminal' | 'json' | 'html';
 }

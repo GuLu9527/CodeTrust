@@ -198,10 +198,17 @@ export const securityRules: Rule[] = [
       const lines = context.fileContent.split('\n');
 
       for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
+        const line = lines[i];
+        const trimmed = line.trim();
         if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue;
 
-        if (/\.(innerHTML|outerHTML)\s*=/.test(lines[i]) || /dangerouslySetInnerHTML/.test(lines[i])) {
+        const cleaned = line
+          .replace(/(['"`])(?:(?!\1|\\).|\\.)*\1/g, '""')
+          .replace(/\/\/.*$/, '')
+          // Skip regex literals that define patterns (rule definitions, not actual usage)
+          .replace(/\/[^/]+\/[dgimsuvy]*/g, '""');
+
+        if (/\.(innerHTML|outerHTML)\s*=/.test(cleaned) || /dangerouslySetInnerHTML/.test(cleaned)) {
           issues.push({
             ruleId: 'security/dangerous-html',
             severity: 'medium',

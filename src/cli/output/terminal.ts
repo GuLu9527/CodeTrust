@@ -1,10 +1,9 @@
 import pc from 'picocolors';
 import Table from 'cli-table3';
-import { TrustReport, Issue } from '../../types/index.js';
+import { TrustReport, ReportIssue } from '../../types/index.js';
 import { getGradeEmoji, getGradeLabel } from '../../core/scorer.js';
 import { isZhLocale } from '../../i18n/index.js';
 
-// 翻译字典
 const en = {
   reportTitle: '📊 CodeTrust Report',
   overallScore: 'Overall Trust Score',
@@ -16,6 +15,12 @@ const en = {
   issuesHeader: 'Issues ({{count}}):',
   noIssuesFound: 'No issues found! 🎉',
   scanned: 'Scanned {{count}} file(s)',
+  healthHeader: 'Tool Health',
+  rulesFailed: 'Failed rules: {{count}}',
+  filesSkipped: 'Skipped files: {{count}}',
+  filesExcluded: 'Excluded files: {{count}}',
+  lifecycleHeader: 'Lifecycle',
+  lifecycleSummary: 'New: {{new}}  Existing: {{existing}}  Fixed: {{fixed}}',
 };
 
 const zh = {
@@ -29,6 +34,12 @@ const zh = {
   issuesHeader: '问题列表 ({{count}}):',
   noIssuesFound: '未发现问题! 🎉',
   scanned: '扫描了 {{count}} 个文件',
+  healthHeader: '工具健康度',
+  rulesFailed: '失败规则数：{{count}}',
+  filesSkipped: '跳过文件数：{{count}}',
+  filesExcluded: '排除文件数：{{count}}',
+  lifecycleHeader: '生命周期',
+  lifecycleSummary: '新增：{{new}}  已存在：{{existing}}  已修复：{{fixed}}',
 };
 
 export function renderTerminalReport(report: TrustReport): string {
@@ -78,23 +89,46 @@ export function renderTerminalReport(report: TrustReport): string {
   const dims = ['security', 'logic', 'structure', 'style', 'coverage'] as const;
 
   for (const dim of dims) {
-    const d = report.dimensions[dim];
-    const dimEmoji = d.score >= 80 ? '✅' : d.score >= 60 ? '⚠️' : '❌';
-    const color = getScoreColor(d.score);
-    const issueCount = d.issues.length;
+    const dimension = report.dimensions[dim];
+    const dimEmoji = dimension.score >= 80 ? '✅' : dimension.score >= 60 ? '⚠️' : '❌';
+    const color = getScoreColor(dimension.score);
+    const issueCount = dimension.issues.length;
     const detail = issueCount === 0
       ? pc.green(t.noIssues)
       : t.issuesFound.replace('{{count}}', String(issueCount));
 
     table.push([
       `${dimEmoji} ${dimLabels[dim]}`,
-      color(String(d.score)),
+      color(String(dimension.score)),
       detail,
     ]);
   }
 
   lines.push(table.toString());
   lines.push('');
+
+  if (report.toolHealth.rulesFailed > 0 || report.toolHealth.filesSkipped > 0 || report.toolHealth.filesExcluded > 0) {
+    lines.push(pc.bold(t.healthHeader));
+    if (report.toolHealth.rulesFailed > 0) {
+      lines.push(pc.yellow(`  ${t.rulesFailed.replace('{{count}}', String(report.toolHealth.rulesFailed))}`));
+    }
+    if (report.toolHealth.filesSkipped > 0) {
+      lines.push(pc.yellow(`  ${t.filesSkipped.replace('{{count}}', String(report.toolHealth.filesSkipped))}`));
+    }
+    if (report.toolHealth.filesExcluded > 0) {
+      lines.push(pc.dim(`  ${t.filesExcluded.replace('{{count}}', String(report.toolHealth.filesExcluded))}`));
+    }
+    lines.push('');
+  }
+
+  if (report.lifecycle) {
+    lines.push(pc.bold(t.lifecycleHeader));
+    lines.push(`  ${t.lifecycleSummary
+      .replace('{{new}}', String(report.lifecycle.newIssues))
+      .replace('{{existing}}', String(report.lifecycle.existingIssues))
+      .replace('{{fixed}}', String(report.lifecycle.fixedIssues))}`);
+    lines.push('');
+  }
 
   if (report.issues.length > 0) {
     lines.push(pc.bold(t.issuesHeader.replace('{{count}}', String(report.issues.length))));
@@ -116,7 +150,7 @@ export function renderTerminalReport(report: TrustReport): string {
   return lines.join('\n');
 }
 
-function formatIssue(issue: Issue, isZh?: boolean): string {
+function formatIssue(issue: ReportIssue, isZh?: boolean): string {
   const severityLabel = formatSeverity(issue.severity, isZh);
   const location = pc.dim(`${issue.file}:${issue.startLine}-${issue.endLine}`);
   const message = issue.message;

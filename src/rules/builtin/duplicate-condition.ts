@@ -90,14 +90,20 @@ function stringifyCondition(node: TSESTree.Node): string {
     case AST_NODE_TYPES.Literal:
       return String(node.value);
     case AST_NODE_TYPES.BinaryExpression:
+      return `${stringifyCondition(node.left)} ${node.operator} ${stringifyCondition(node.right)}`;
     case AST_NODE_TYPES.LogicalExpression:
       return `${stringifyCondition(node.left)} ${node.operator} ${stringifyCondition(node.right)}`;
     case AST_NODE_TYPES.UnaryExpression:
       return `${node.operator}${stringifyCondition(node.argument)}`;
     case AST_NODE_TYPES.MemberExpression:
       return `${stringifyCondition(node.object)}.${stringifyCondition(node.property)}`;
-    case AST_NODE_TYPES.CallExpression:
-      return `${stringifyCondition(node.callee)}(...)`;
+    case AST_NODE_TYPES.CallExpression: {
+      // Include arguments to distinguish between different calls like startsWith('+') vs startsWith('-')
+      const args = node.arguments.map(arg => stringifyCondition(arg)).join(', ');
+      return `${stringifyCondition(node.callee)}(${args})`;
+    }
+    case AST_NODE_TYPES.ConditionalExpression:
+      return `${stringifyCondition(node.test)} ? ${stringifyCondition(node.consequent)} : ${stringifyCondition(node.alternate)}`;
     default:
       return `[${node.type}]`;
   }

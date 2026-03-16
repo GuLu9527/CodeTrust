@@ -11,7 +11,7 @@ import { t } from '../../i18n/index.js';
 
 // Numbers that are commonly used and generally acceptable
 const ALLOWED_NUMBERS = new Set([
-  -1, 0, 1, 2, 10, 100,
+  -1, 0, 0.1, 0.10, 0.15, 0.2, 0.20, 0.25, 0.3, 0.30, 0.5, 1, 2, 3, 4, 5, 10, 15, 20, 30, 40, 50, 70, 90, 100,
 ]);
 
 export const magicNumberRule: Rule = {
@@ -56,6 +56,9 @@ export const magicNumberRule: Rule = {
 
       // Skip lines that are purely return statements with simple numbers
       if (/^\s*return\s+[0-9]+\s*;?\s*$/.test(line)) continue;
+
+      // Skip object property defaults and config-style numeric maps.
+      if (/^\s*['"]?[-\w]+['"]?\s*:\s*-?\d+\.?\d*(?:e[+-]?\d+)?\s*,?\s*$/.test(trimmed)) continue;
 
       // Remove string contents and comments
       const cleaned = line

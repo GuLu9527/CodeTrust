@@ -132,6 +132,16 @@ function calculateCyclomaticComplexity(root: TSESTree.Node): number {
   let complexity = 1;
 
   walkAST(root, (n) => {
+    // Skip nested function bodies - they have their own metrics
+    if (
+      n.type === AST_NODE_TYPES.FunctionDeclaration ||
+      n.type === AST_NODE_TYPES.FunctionExpression ||
+      n.type === AST_NODE_TYPES.ArrowFunctionExpression ||
+      n.type === AST_NODE_TYPES.MethodDefinition
+    ) {
+      return false; // Don't traverse into nested functions
+    }
+
     switch (n.type) {
       case AST_NODE_TYPES.IfStatement:
       case AST_NODE_TYPES.ConditionalExpression:
@@ -164,6 +174,16 @@ function calculateCognitiveComplexity(root: TSESTree.Node): number {
   depthMap.set(root, 0);
 
   walkAST(root, (n, parent) => {
+    // Skip nested function bodies - they have their own metrics
+    if (
+      n.type === AST_NODE_TYPES.FunctionDeclaration ||
+      n.type === AST_NODE_TYPES.FunctionExpression ||
+      n.type === AST_NODE_TYPES.ArrowFunctionExpression ||
+      n.type === AST_NODE_TYPES.MethodDefinition
+    ) {
+      return false; // Don't traverse into nested functions
+    }
+
     const parentDepth = parent ? (depthMap.get(parent) ?? 0) : 0;
     const isNesting = isNestingNode(n);
     const depth = isNesting ? parentDepth + 1 : parentDepth;
@@ -191,6 +211,16 @@ function calculateMaxNestingDepth(root: TSESTree.Node): number {
   depthMap.set(root, 0);
 
   walkAST(root, (n, parent) => {
+    // Skip nested function bodies - they have their own metrics
+    if (
+      n.type === AST_NODE_TYPES.FunctionDeclaration ||
+      n.type === AST_NODE_TYPES.FunctionExpression ||
+      n.type === AST_NODE_TYPES.ArrowFunctionExpression ||
+      n.type === AST_NODE_TYPES.MethodDefinition
+    ) {
+      return false; // Don't traverse into nested functions
+    }
+
     const parentDepth = parent ? (depthMap.get(parent) ?? 0) : 0;
     const isNesting =
       n.type === AST_NODE_TYPES.IfStatement ||

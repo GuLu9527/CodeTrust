@@ -1,4 +1,4 @@
-import { Issue, DimensionScore, TrustGrade, RuleCategory } from '../types/index.js';
+import { ReportIssue, DimensionScore, TrustGrade, RuleCategory } from '../types/index.js';
 import { DimensionWeights } from '../types/config.js';
 import { isZhLocale } from '../i18n/index.js';
 
@@ -11,7 +11,7 @@ const SEVERITY_PENALTY: Record<string, number> = {
   info: 0,
 };
 
-export function calculateDimensionScore(issues: Issue[]): DimensionScore {
+export function calculateDimensionScore(issues: ReportIssue[]): DimensionScore {
   let score = 100;
 
   for (const issue of issues) {

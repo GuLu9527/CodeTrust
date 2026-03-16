@@ -6,9 +6,9 @@ import { renderJsonReport } from '../output/json.js';
 
 export function createReportCommand(): Command {
   const cmd = new Command('report')
-    .description('Generate a trust report for recent changes')
+    .description('Render a report for a diff-based scan (transitional wrapper around scan)')
     .option('--json', 'Output as JSON')
-    .option('--diff <ref>', 'Diff against a git ref', 'HEAD~1')
+    .option('--diff <ref>', 'Diff against a git ref for report presentation', 'HEAD~1')
     .action(async (opts) => {
       try {
         const config = await loadConfig();

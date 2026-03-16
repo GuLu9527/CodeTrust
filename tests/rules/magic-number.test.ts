@@ -35,4 +35,16 @@ describe('logic/magic-number', () => {
     const issues = run(code);
     expect(issues.length).toBe(0);
   });
+
+  it('should allow config-style object numeric defaults', () => {
+    const code = [
+      'const config = {',
+      '  timeout: 30,',
+      '  retries: 5,',
+      '  weight: 0.25,',
+      '};',
+    ].join('\n');
+    const issues = run(code);
+    expect(issues.length).toBe(0);
+  });
 });

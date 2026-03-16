@@ -118,7 +118,7 @@ function detectCodeAfterReturn(
 
     if (/^(return|throw)\b/.test(trimmed) && !trimmed.includes('=>')) {
       // 如果 return/throw 行以开括号结尾（多行返回值），跳过
-      const endsOpen = /[{(\[,]$/.test(trimmed) || /^(return|throw)\s*$/.test(trimmed);
+      const endsOpen = /[[{(,]$/.test(trimmed) || /^(return|throw)\s*$/.test(trimmed);
       if (endsOpen) continue;
       lastReturnDepth = braceDepth;
       lastReturnLine = i;

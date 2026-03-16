@@ -138,4 +138,10 @@ describe('security/dangerous-html', () => {
     const issues = run('security/dangerous-html', code);
     expect(issues.length).toBe(0);
   });
+
+  it('should NOT flag detector definition strings mentioning dangerous HTML APIs', () => {
+    const code = `const detector = { pattern: /\\.(innerHTML|outerHTML)\\s*=/, label: 'dangerouslySetInnerHTML' };`;
+    const issues = run('security/dangerous-html', code);
+    expect(issues.length).toBe(0);
+  });
 });
