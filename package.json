@@ -1,6 +1,6 @@
 {
   "name": "@gulu9527/code-trust",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "AI code trust verification tool — verify AI-generated code with deterministic algorithms",
   "type": "module",
   "main": "./dist/index.js",
