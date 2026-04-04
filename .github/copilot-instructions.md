@@ -1,0 +1,1 @@
+Read [AGENTS.md](../../AGENTS.md) at the repository root for all project instructions, architecture, commands, and workflow guidance.
