@@ -1,6 +1,7 @@
 import { Issue } from '../../types/index.js';
 import { Rule, RuleContext } from '../types.js';
 import { t } from '../../i18n/index.js';
+import { extractBraceBlock } from '../brace-utils.js';
 
 /**
  * Detects empty or useless catch blocks that silently swallow errors.
@@ -42,7 +43,8 @@ export const emptyCatchRule: Rule = {
       if (!catchMatch) continue;
 
       const catchVarName = catchMatch[1] || '';
-      const blockContent = extractCatchBody(lines, i);
+      const catchIdx = lines[i].indexOf('catch');
+      const blockContent = extractBraceBlock(lines, i, catchIdx);
       if (!blockContent) continue;
 
       const { bodyLines, endLine } = blockContent;
@@ -101,45 +103,3 @@ export const emptyCatchRule: Rule = {
     return issues;
   },
 };
-
-interface CatchBody {
-  bodyLines: string[];
-  endLine: number;
-}
-
-function extractCatchBody(lines: string[], catchLineIndex: number): CatchBody | null {
-  // Find the 'catch' keyword position to skip the preceding '}' from the try block
-  const catchLine = lines[catchLineIndex];
-  const catchIdx = catchLine.indexOf('catch');
-  if (catchIdx === -1) return null;
-
-  let braceCount = 0;
-  let started = false;
-  let bodyStart = -1;
-
-  for (let i = catchLineIndex; i < lines.length; i++) {
-    const line = lines[i];
-    const startJ = i === catchLineIndex ? catchIdx : 0;
-
-    for (let j = startJ; j < line.length; j++) {
-      const ch = line[j];
-      if (ch === '{') {
-        braceCount++;
-        if (!started) {
-          started = true;
-          bodyStart = i;
-        }
-      } else if (ch === '}') {
-        braceCount--;
-        if (started && braceCount === 0) {
-          return {
-            bodyLines: lines.slice(bodyStart + 1, i),
-            endLine: i,
-          };
-        }
-      }
-    }
-  }
-
-  return null;
-}

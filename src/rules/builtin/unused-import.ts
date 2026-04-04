@@ -124,13 +124,35 @@ export const unusedImportRule: Rule = {
       return;
     });
 
-    // Also check for references in type annotations via string matching
-    // This catches cases where type-only imports are used in type positions
-    // that the AST walker might miss
-    const typeRefPattern = /\b([A-Z][A-Za-z0-9]*)\b/g;
-    let match;
-    while ((match = typeRefPattern.exec(context.fileContent)) !== null) {
-      references.add(match[1]);
+    // Check for type references in non-comment, non-string code lines.
+    // The AST walker may miss some type-only references in annotations.
+    const codeLines = context.fileContent.split('\n');
+    let inBlock = false;
+    for (const codeLine of codeLines) {
+      const trimmedCode = codeLine.trim();
+      if (inBlock) {
+        if (trimmedCode.includes('*/')) inBlock = false;
+        continue;
+      }
+      if (trimmedCode.startsWith('/*')) {
+        if (!trimmedCode.includes('*/')) inBlock = true;
+        continue;
+      }
+      if (trimmedCode.startsWith('//') || trimmedCode.startsWith('*')) continue;
+
+      // Strip inline comments and string literals before matching
+      const cleaned = codeLine
+        .replace(/\/\/.*$/, '')
+        .replace(/\/\*.*?\*\//g, '')
+        .replace(/'(?:[^'\\]|\\.)*'/g, '')
+        .replace(/"(?:[^"\\]|\\.)*"/g, '')
+        .replace(/`(?:[^`\\]|\\.)*`/g, '');
+
+      const typeRefPattern = /\b([A-Z][A-Za-z0-9]*)\b/g;
+      let match;
+      while ((match = typeRefPattern.exec(cleaned)) !== null) {
+        references.add(match[1]);
+      }
     }
 
     // Report unused imports

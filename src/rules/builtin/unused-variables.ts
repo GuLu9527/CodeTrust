@@ -133,11 +133,29 @@ function collectDeclarationsAndReferences(
       });
     }
 
+    // Collect class declarations
+    if (node.type === AST_NODE_TYPES.ClassDeclaration && node.id) {
+      declarations.set(node.id.name, {
+        line: node.loc?.start.line ?? 0,
+        kind: exportedNames.has(node.id.name) ? 'export' : 'local',
+      });
+    }
+
     // 收集引用（非声明位置的 Identifier）
+    const declarationParentTypes = new Set([
+      'VariableDeclarator',
+      'FunctionDeclaration',
+      'ClassDeclaration',
+      'MethodDefinition',
+      'TSEnumDeclaration',
+      'TSEnumMember',
+      'TSTypeAliasDeclaration',
+      'TSInterfaceDeclaration',
+      'TSModuleDeclaration',
+    ]);
     if (
       node.type === AST_NODE_TYPES.Identifier &&
-      parentType !== 'VariableDeclarator' &&
-      parentType !== 'FunctionDeclaration'
+      !declarationParentTypes.has(parentType ?? '')
     ) {
       references.add(node.name);
     }

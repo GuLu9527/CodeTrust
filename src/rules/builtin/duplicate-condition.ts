@@ -104,8 +104,26 @@ function stringifyCondition(node: TSESTree.Node): string {
     }
     case AST_NODE_TYPES.ConditionalExpression:
       return `${stringifyCondition(node.test)} ? ${stringifyCondition(node.consequent)} : ${stringifyCondition(node.alternate)}`;
+    case AST_NODE_TYPES.TemplateLiteral:
+      return `\`template@${node.loc?.start.line}:${node.loc?.start.column}\``;
+    case AST_NODE_TYPES.ArrayExpression:
+      return `[${(node as TSESTree.ArrayExpression).elements.map(e => e ? stringifyCondition(e) : 'empty').join(', ')}]`;
+    case AST_NODE_TYPES.ObjectExpression:
+      return `{obj@${node.loc?.start.line}:${node.loc?.start.column}}`;
+    case AST_NODE_TYPES.AssignmentExpression:
+      return `${stringifyCondition((node as TSESTree.AssignmentExpression).left)} ${(node as TSESTree.AssignmentExpression).operator} ${stringifyCondition((node as TSESTree.AssignmentExpression).right)}`;
+    case AST_NODE_TYPES.NewExpression:
+      return `new ${stringifyCondition((node as TSESTree.NewExpression).callee)}(${(node as TSESTree.NewExpression).arguments.map(a => stringifyCondition(a)).join(', ')})`;
+    case AST_NODE_TYPES.TSAsExpression:
+    case AST_NODE_TYPES.TSNonNullExpression:
+      return stringifyCondition((node as { expression: TSESTree.Node }).expression);
+    case AST_NODE_TYPES.AwaitExpression:
+      return `await ${stringifyCondition((node as TSESTree.AwaitExpression).argument)}`;
+    case AST_NODE_TYPES.ChainExpression:
+      return stringifyCondition((node as TSESTree.ChainExpression).expression);
     default:
-      return `[${node.type}]`;
+      // Include location to prevent false collisions between different unknown nodes
+      return `[${node.type}@${node.loc?.start.line}:${node.loc?.start.column}]`;
   }
 }
 

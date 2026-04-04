@@ -19,12 +19,18 @@ export function createScanCommand(): Command {
         const config = await loadConfig();
         const engine = new ScanEngine(config);
 
+        const parsedMinScore = parseInt(opts.minScore, 10);
+        if (isNaN(parsedMinScore)) {
+          console.error(`Error: Invalid --min-score value "${opts.minScore}". Must be a number.`);
+          process.exit(1);
+        }
+
         const scanOptions: ScanOptions = {
           staged: opts.staged,
           diff: opts.diff,
           files: files.length > 0 ? files : undefined,
           format: opts.format,
-          minScore: parseInt(opts.minScore, 10),
+          minScore: parsedMinScore,
           baseline: opts.baseline,
         };
 

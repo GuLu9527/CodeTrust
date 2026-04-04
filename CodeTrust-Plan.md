@@ -1202,6 +1202,67 @@ detection:
 
 > **注意**：第二梯队（函数过长）问题部分属于自举问题，即规则文件本身包含检测模式的字符串。这是自举工具的固有现象，可接受或通过调整阈值处理。
 
+### 2026-04-03 代码审查发现
+
+对全仓库进行了系统性 code review（build/lint/test 全部通过：33 test files, 211 tests）。以下按优先级分类记录发现的问题。
+
+#### P0 — 安全 & 正确性（必须修复）
+
+| # | 位置 | 问题 | 修复方案 |
+|---|------|------|----------|
+| 1 | `action.yml:42` | **GitHub Action 命令注入**: `${{ inputs.diff-ref }}` 直接拼入 shell，恶意 PR 可注入任意命令 | 改用 `env:` 传递 inputs，shell 中用 `"$VAR"` 引用 |
+| 2 | `src/cli/commands/scan.ts:27` | `parseInt(--min-score)` 无 NaN 校验，传 `abc` 时 `score < NaN` 始终 false，**CI 永不失败** | 加 `isNaN` 校验，无效值时报错退出 |
+| 3 | `src/core/engine.ts:376-403` | **Fingerprint 包含绝对行号**，文件头部插入一行后所有 fingerprint 变化，baseline 差异全部显示为 "new" | 改用代码内容哈希替代 `startLine:endLine`（Phase 3 已记录实现，但未标注此缺陷） |
+| 4 | 多个规则: `empty-catch`, `dead-logic`, `unnecessary-try-catch` | **手动花括号计数提取代码块**，字符串/模板/正则中的 `{`/`}` 导致边界错误 → 误报/漏报 | 迁移到 AST walkAST 提取块内容 |
+
+#### P1 — 规则检测质量（直接影响扫描可信度）
+
+| # | 位置 | 问题 | 修复方案 |
+|---|------|------|----------|
+| 5 | `missing-await.ts`, `promise-void.ts` | 只检测**本文件内定义的** async 函数，无法检测 imported 异步函数（如 `fs.promises.readFile`） | 需要跨文件符号表或 import 追踪机制 |
+| 6 | `unused-variables.ts:140` | 未使用变量检测遗漏 class 名、方法名、enum 成员、解构属性等声明形式 → 误报 | 扩展排除的 AST parentType 列表 |
+| 7 | `duplicate-condition.ts:86` | 未处理的 AST 节点类型都返回 `[node.type]`，两个不同复杂表达式被误判为重复条件 | 为更多节点类型实现 stringify，或对未知类型加位置区分 |
+| 8 | `unused-import.ts:130` | 用 `/\b[A-Z][A-Za-z0-9]*\b/g` 在注释中查找引用，注释中碰巧出现同名标识符导致**漏报** | 只在代码行（非注释/字符串）中检查引用 |
+| 9 | `src/core/scorer.ts:7-12` | 评分用**固定扣分值**，不按代码量归一化，7 个 high 直接扣到 0 分，大文件不公平 | 改为密度感知（issues per KLOC）或 diminishing penalty |
+| 10 | `src/core/scorer.ts:31-36` | 维度 key 硬编码，新增 `RuleCategory` 需手动同步 | 从 RuleCategory enum 自动派生 |
+| 11 | `src/core/config.ts` vs `src/types/config.ts` | `generateDefaultConfig` 缺少 `max-cognitive-complexity` 字段，用户生成的配置不完整 | 补齐字段 |
+
+#### P2 — 性能问题
+
+| # | 位置 | 问题 | 修复方案 |
+|---|------|------|----------|
+| 12 | `src/rules/fix-utils.ts:8,21` | `lineStartOffset`/`lineRange` 每次调用都 `content.split('\n')`，大文件多 issue = O(N*M) | 预计算行偏移表，传入 context |
+| 13 | `src/analyzers/baseline.ts:82` | `collectFiles` 用 `readdirSync` 递归遍历，monorepo 阻塞主线程 | 改用 `fs.promises` 异步遍历 |
+| 14 | `src/core/engine.ts:539-561` | `groupByDimension` 对 issues 做 5 次 filter 遍历 | 改为单次 reduce |
+| 15 | `src/core/fix-engine.ts:79` | 指定 `--rule` 时仍执行所有规则再过滤 | 传 ruleId filter 到 RuleEngine.run |
+| 16 | `src/core/fix-engine.ts` | `fix` 方法是 async 但内部用 `readFileSync`/`writeFileSync` | 统一为 `fs.promises` |
+
+#### P3 — i18n 缺失
+
+CLI 命令层大量硬编码英文，未使用 `t()` / `isZhLocale()`：
+- `src/cli/index.ts` — 程序名和描述
+- `src/cli/commands/init.ts` — 成功/警告消息
+- `src/cli/commands/fix.ts` — 命令描述和错误消息
+- `src/cli/commands/rules.ts` — 表格标题和列名
+- `src/cli/commands/hook.ts` — 所有输出
+
+README 声称支持双语自动检测，实际只有 `terminal.ts` 的输出做了中英切换。
+
+#### P4 — 代码质量 & 工程改善
+
+| # | 位置 | 问题 | 修复方案 |
+|---|------|------|----------|
+| 17 | `missing-await.ts`, `promise-void.ts` | async 函数收集逻辑重复 | 提取共享 `collectAsyncFunctions` 工具函数 |
+| 18 | ~10 个规则文件 | 各自实现 `inBlockComment` 注释跟踪 | 抽成 `src/rules/utils/comment-tracker.ts` |
+| 19 | `src/core/engine.ts:362-370` | 自制 glob→regex 转换，边界 case 多 | 用 `micromatch` 或 `picomatch` 替代 |
+| 20 | `src/parsers/ast.ts:101` | 箭头函数统一命名 `<arrow>`，丢失 `const myFunc = () => {}` 的名称 | 检查父节点 VariableDeclarator 获取名称 |
+| 21 | `src/parsers/diff.ts:110` | Diff 路径解析正则无法处理文件名含空格或 ` b/` 的情况 | 用更严格的 diff header parser |
+| 22 | `src/types/index.ts:114-121` | `DiffFile.status` 缺少 `copied` / `type changed` | 补齐 Git diff status 类型 |
+| 23 | `src/cli/commands/hook.ts:40-44` | pre-commit hook 已存在时直接跳过，不提供追加选项 | 提供 `--force` 覆盖或追加模式 |
+| 24 | `src/i18n/index.ts:38-51` | macOS locale 检测执行同步 shell 命令阻塞事件循环 | 改为 `execFileSync` 或缓存后异步 |
+
+---
+
 ### Phase 4 — 问题生命周期与策略（CI trust gate 核心）
 
 目标：从“会扫描”升级为“会做可信决策”。

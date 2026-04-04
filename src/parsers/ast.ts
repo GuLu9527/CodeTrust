@@ -62,7 +62,7 @@ export function extractFunctions(parsed: ParsedAST): FunctionInfo[] {
 function visitNode(root: TSESTree.Node, functions: FunctionInfo[]): void {
   const methodBodies = new WeakSet<TSESTree.Node>();
 
-  walkAST(root, (node) => {
+  walkAST(root, (node, parent) => {
     // 跳过 MethodDefinition 内部的 FunctionExpression（避免双重计数）
     if (node.type === AST_NODE_TYPES.FunctionExpression && methodBodies.has(node)) {
       return false;
@@ -74,7 +74,7 @@ function visitNode(root: TSESTree.Node, functions: FunctionInfo[]): void {
       node.type === AST_NODE_TYPES.ArrowFunctionExpression ||
       node.type === AST_NODE_TYPES.MethodDefinition
     ) {
-      const info = analyzeFunctionNode(node);
+      const info = analyzeFunctionNode(node, parent);
       if (info) functions.push(info);
       if (node.type === AST_NODE_TYPES.MethodDefinition) {
         methodBodies.add(node.value);
@@ -84,7 +84,7 @@ function visitNode(root: TSESTree.Node, functions: FunctionInfo[]): void {
   });
 }
 
-function analyzeFunctionNode(node: TSESTree.Node): FunctionInfo | null {
+function analyzeFunctionNode(node: TSESTree.Node, parent?: TSESTree.Node): FunctionInfo | null {
   let name = '<anonymous>';
   let params: TSESTree.Parameter[] = [];
   let body: TSESTree.Node | null = null;
@@ -98,7 +98,15 @@ function analyzeFunctionNode(node: TSESTree.Node): FunctionInfo | null {
     params = node.params;
     body = node.body;
   } else if (node.type === AST_NODE_TYPES.ArrowFunctionExpression) {
-    name = '<arrow>';
+    // Infer name from parent: const myFunc = () => {}
+    if (
+      parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+      parent.id.type === AST_NODE_TYPES.Identifier
+    ) {
+      name = parent.id.name;
+    } else {
+      name = '<arrow>';
+    }
     params = node.params;
     body = node.body;
   } else if (node.type === AST_NODE_TYPES.MethodDefinition) {

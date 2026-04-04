@@ -2,8 +2,8 @@ import { ReportIssue, DimensionScore, TrustGrade, RuleCategory } from '../types/
 import { DimensionWeights } from '../types/config.js';
 import { isZhLocale } from '../i18n/index.js';
 
-// Info-level issues (e.g. console-in-code) have 0 penalty — they are
-// advisory only and do not affect the trust score.
+// Base penalty per severity. Info-level issues are advisory and do not
+// affect the trust score.
 const SEVERITY_PENALTY: Record<string, number> = {
   high: 15,
   medium: 8,
@@ -11,15 +11,31 @@ const SEVERITY_PENALTY: Record<string, number> = {
   info: 0,
 };
 
+// Diminishing factor: the Nth issue of the same severity contributes
+// basePenalty * DIMINISHING_FACTOR^(N-1).  This prevents a handful of
+// repeated issues from immediately zeroing out the score on larger files.
+const DIMINISHING_FACTOR = 0.7;
+
 export function calculateDimensionScore(issues: ReportIssue[]): DimensionScore {
   let score = 100;
 
+  // Track how many issues of each severity we've seen so far
+  const severityCounts: Record<string, number> = {};
+
   for (const issue of issues) {
-    score -= SEVERITY_PENALTY[issue.severity] ?? 0;
+    const base = SEVERITY_PENALTY[issue.severity] ?? 0;
+    if (base === 0) continue;
+
+    const n = severityCounts[issue.severity] ?? 0;
+    severityCounts[issue.severity] = n + 1;
+
+    // Diminishing penalty: first issue pays full, subsequent issues pay less
+    const penalty = base * Math.pow(DIMINISHING_FACTOR, n);
+    score -= penalty;
   }
 
   return {
-    score: Math.max(0, Math.min(100, score)),
+    score: Math.round(Math.max(0, Math.min(100, score)) * 10) / 10,
     issues,
   };
 }

@@ -1,6 +1,7 @@
 import { Issue } from '../../types/index.js';
 import { Rule, RuleContext } from '../types.js';
 import { t } from '../../i18n/index.js';
+import { countBracesInLine } from '../brace-utils.js';
 
 /**
  * Detects dead logic patterns — code that can never execute or
@@ -101,23 +102,14 @@ function detectCodeAfterReturn(
   let braceDepth = 0;
   let lastReturnDepth = -1;
   let lastReturnLine = -1;
+  const blockComment = { value: false };
 
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
 
-    for (const ch of trimmed) {
-      if (ch === '{') braceDepth++;
-      if (ch === '}') {
-        if (braceDepth === lastReturnDepth) {
-          lastReturnDepth = -1;
-          lastReturnLine = -1;
-        }
-        braceDepth--;
-      }
-    }
+    braceDepth = countBracesInLine(lines[i], 0, braceDepth, blockComment);
 
     if (/^(return|throw)\b/.test(trimmed) && !trimmed.includes('=>')) {
-      // 如果 return/throw 行以开括号结尾（多行返回值），跳过
       const endsOpen = /[[{(,]$/.test(trimmed) || /^(return|throw)\s*$/.test(trimmed);
       if (endsOpen) continue;
       lastReturnDepth = braceDepth;
@@ -149,6 +141,12 @@ function detectCodeAfterReturn(
           '移除不可达代码或重构逻辑。',
         ),
       });
+      lastReturnDepth = -1;
+      lastReturnLine = -1;
+    }
+
+    // Reset when we leave the scope
+    if (braceDepth < lastReturnDepth) {
       lastReturnDepth = -1;
       lastReturnLine = -1;
     }

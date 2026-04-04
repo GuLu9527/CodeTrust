@@ -48,15 +48,37 @@ describe('scorer', () => {
     });
 
     it('should not go below 0', () => {
+      // With diminishing penalty (0.7 factor), 10 high issues still stay >= 0
       const issues = Array(10).fill(null).map(() => makeIssue('high'));
       const result = calculateDimensionScore(issues);
-      expect(result.score).toBe(0);
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      // With diminishing penalty, 10 highs won't reach 0 anymore
+      expect(result.score).toBeGreaterThan(0);
     });
 
-    it('should accumulate multiple issues', () => {
+    it('should floor at 0 with extreme issues', () => {
+      // With diminishing penalty (factor=0.7), each severity series converges
+      // to basePenalty/(1-factor).  high→50, medium→26.67, low→10.
+      // Combined: 50+26.67+10 = 86.67, still not 100. So we need enough
+      // issues across all severities to exceed 100 total penalty.
+      const issues = [
+        ...Array(50).fill(null).map(() => makeIssue('high')),
+        ...Array(50).fill(null).map(() => makeIssue('medium')),
+        ...Array(50).fill(null).map(() => makeIssue('low')),
+      ];
+      const result = calculateDimensionScore(issues);
+      // Total converges to ~86.67, score floors at max(0, 100-86.67) ≈ 13.3
+      // With diminishing penalty the score can never truly reach 0 from
+      // any finite number of issues, so just verify it's low.
+      expect(result.score).toBeLessThan(15);
+      expect(result.score).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should accumulate multiple issues with diminishing penalty', () => {
       const issues = [makeIssue('high'), makeIssue('medium'), makeIssue('low')];
       const result = calculateDimensionScore(issues);
-      expect(result.score).toBe(100 - 15 - 8 - 3); // 74
+      // First of each severity pays full penalty: 15 + 8 + 3 = 26
+      expect(result.score).toBe(74);
     });
   });
 

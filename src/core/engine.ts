@@ -37,7 +37,7 @@ const PKG_VERSION: string = (() => {
 })();
 
 const REPORT_SCHEMA_VERSION = '1.0.0';
-const FINGERPRINT_VERSION = '1';
+const FINGERPRINT_VERSION = '2';
 
 interface CandidateSelection {
   scanMode: ScanMode;
@@ -378,13 +378,26 @@ export class ScanEngine {
 
     return issues.map((issue) => {
       const normalizedFile = this.normalizeRelativePath(issue.file);
-      const locationComponent = `${issue.startLine}:${issue.endLine}`;
+
+      // Use a content-based hash instead of absolute line numbers so that
+      // inserting/removing lines above an issue doesn't invalidate its fingerprint.
+      // We intentionally exclude `issue.message` because it is locale-dependent
+      // (i18n) and would produce different fingerprints for the same issue in
+      // different locales.
+      const contentSource = issue.codeSnippet
+        ? issue.codeSnippet
+        : `${issue.startLine}:${issue.endLine}`;
+      const contentDigest = createHash('sha256')
+        .update(contentSource)
+        .digest('hex')
+        .slice(0, 16);
+
       const baseKey = [
         issue.ruleId,
         normalizedFile,
         issue.category,
         issue.severity,
-        locationComponent,
+        contentDigest,
       ].join('|');
       const occurrenceIndex = occurrenceCounts.get(baseKey) ?? 0;
       occurrenceCounts.set(baseKey, occurrenceIndex + 1);
@@ -539,22 +552,25 @@ export class ScanEngine {
   private groupByDimension(
     issues: ReportIssue[],
   ): Record<RuleCategory, DimensionScore> {
-    const categories: RuleCategory[] = [
-      'security',
-      'logic',
-      'structure',
-      'style',
-      'coverage',
-    ];
+    const buckets: Record<RuleCategory, ReportIssue[]> = {
+      security: [],
+      logic: [],
+      structure: [],
+      style: [],
+      coverage: [],
+    };
+
+    for (const issue of issues) {
+      buckets[issue.category]?.push(issue);
+    }
 
     const grouped: Record<RuleCategory, DimensionScore> = {} as Record<
       RuleCategory,
       DimensionScore
     >;
 
-    for (const cat of categories) {
-      const catIssues = issues.filter((issue) => issue.category === cat);
-      grouped[cat] = calculateDimensionScore(catIssues);
+    for (const cat of Object.keys(buckets) as RuleCategory[]) {
+      grouped[cat] = calculateDimensionScore(buckets[cat]);
     }
 
     return grouped;

@@ -107,10 +107,21 @@ export class DiffParser {
   private parseFileDiff(fileDiff: string): DiffFile | null {
     const lines = fileDiff.split('\n');
 
-    const headerMatch = lines[0]?.match(/a\/(.+?) b\/(.+)/);
-    if (!headerMatch) return null;
-
-    const filePath = headerMatch[2];
+    // Prefer +++ line for path extraction — it is unambiguous even when
+    // filenames contain spaces or the literal substring " b/".
+    // Falls back to the diff header line for binary files (no +++ line).
+    let filePath: string | null = null;
+    for (const line of lines) {
+      if (line.startsWith('+++ b/')) {
+        filePath = line.slice(6);
+        break;
+      }
+    }
+    if (!filePath) {
+      const headerMatch = lines[0]?.match(/a\/(.+?) b\/(.+)/);
+      if (!headerMatch) return null;
+      filePath = headerMatch[2];
+    }
     let status: DiffFile['status'] = 'modified';
     let additions = 0;
     let deletions = 0;

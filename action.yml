@@ -38,5 +38,9 @@ runs:
 
     - name: Run CodeTrust scan
       shell: bash
+      env:
+        DIFF_REF: ${{ inputs.diff-ref }}
+        FORMAT: ${{ inputs.format }}
+        MIN_SCORE: ${{ inputs.min-score }}
       run: |
-        codetrust scan --diff ${{ inputs.diff-ref }} --format ${{ inputs.format }} --min-score ${{ inputs.min-score }}
+        codetrust scan --diff "$DIFF_REF" --format "$FORMAT" --min-score "$MIN_SCORE"

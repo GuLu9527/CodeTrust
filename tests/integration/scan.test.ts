@@ -38,11 +38,11 @@ describe('integration: scan engine', () => {
     expect(report.scanMode).toBe('files');
     expect(report.overall.score).toBeLessThan(90);
     expect(report.overall.issuesFound).toBeGreaterThan(10);
-    expect(report.dimensions.logic.score).toBeLessThan(50);
+    expect(report.dimensions.logic.score).toBeLessThan(70);
     expect(report.dimensions.security.score).toBe(100);
     expect(report.issues.length).toBeGreaterThan(0);
     expect(report.issues.every((issue) => issue.fingerprint.length > 0)).toBe(true);
-    expect(report.issues.every((issue) => issue.fingerprintVersion === '1')).toBe(true);
+    expect(report.issues.every((issue) => issue.fingerprintVersion === '2')).toBe(true);
     expect(report.toolHealth.filesConsidered).toBe(1);
     expect(report.toolHealth.filesScanned).toBe(1);
   });

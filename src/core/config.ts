@@ -68,6 +68,7 @@ thresholds:
   min-score: 70
   max-function-length: 40
   max-cyclomatic-complexity: 10
+  max-cognitive-complexity: 20
   max-nesting-depth: 4
   max-params: 5
 
