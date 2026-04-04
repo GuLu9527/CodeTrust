@@ -16,10 +16,10 @@ When choosing between roadmap branches, prefer work that strengthens CodeTrust a
 
 Current priority order:
 
-1. Stable finding identity / fingerprinting
-2. Baseline comparison and lifecycle (`new` / `existing` / `fixed` / `suppressed`)
-3. Suppression semantics and policy control
-4. Tool health visibility (rule failures, skipped files, scan errors, execution metadata)
+1. ~~Stable finding identity / fingerprinting~~ — implemented (content-hash SHA256)
+2. ~~Baseline comparison and lifecycle (`new` / `existing` / `fixed`)~~ — implemented (`--baseline`)
+3. Suppression semantics (`suppressed` lifecycle state) and policy control
+4. ~~Tool health visibility (rule failures, skipped files, scan errors, execution metadata)~~ — implemented (`toolHealth`)
 5. CI-ready delivery (clear JSON output, GitHub Action summary/annotations)
 
 Deprioritize new surface area until the above is solid, especially:
@@ -119,28 +119,30 @@ When starting work, these are the fastest files to read first:
 The main scan flow is:
 
 1. CLI command loads config with `loadConfig()` from `src/core/config.ts`
-2. `ScanEngine` in `src/core/engine.ts` determines target files from `DiffParser`
+2. `ScanEngine` in `src/core/engine.ts` determines target files via `getScanCandidates` (respects config `include`/`exclude` globs)
 3. For each file, it reads the current content (or falls back to git content for missing files)
 4. It derives `addedLines` from diff hunks
-5. `RuleEngine` runs builtin rules against the file context
+5. `RuleEngine` runs builtin rules via `runWithDiagnostics()`, capturing rule failures into `toolHealth.ruleFailures`
 6. For TS/JS files, additional analyzers run:
    - `src/analyzers/structure.ts`
    - `src/analyzers/style.ts`
    - `src/analyzers/coverage.ts`
-7. `src/core/scorer.ts` computes per-dimension scores and the overall trust score
-8. The CLI renders terminal or JSON output
+7. `attachFingerprints()` assigns content-hash fingerprints (SHA256 of ruleId + filePath + snippet) to each issue
+8. If `--baseline` is provided, `loadBaseline()` reads a previous report and the engine compares fingerprints to determine issue lifecycle (`new` / `existing`) and detect `fixedIssues`
+9. `src/core/scorer.ts` computes per-dimension scores and the overall trust score
+10. The CLI renders terminal or JSON output (including `lifecycle` summary when baseline is active)
 
 Important current behavior:
 
 - `ScanEngine` supports four scan modes via `ScanOptions`: staged, diff-against-ref, explicit file list, or default uncommitted changes.
 - Diff collection is centralized in `src/parsers/diff.ts` using `simple-git`.
-- `src/core/config.ts` supports `include` / `exclude` in config, but the current `ScanEngine` path selection is driven by diff/files input and does not centrally apply those globs during scan execution.
+- `getScanCandidates` centrally applies config `include`/`exclude` globs across all scan modes.
 
 ## Rules, analyzers, and scoring
 
 - Builtin rules are registered in `src/rules/engine.ts` from `src/rules/builtin/*`.
 - Rule disabling is config-driven through `config.rules.disabled`.
-- Rule execution errors are currently swallowed inside `RuleEngine.run()`; if you are debugging missing findings, check there first.
+- In the scan flow, rules run via `RuleEngine.runWithDiagnostics()`, which captures exceptions into `toolHealth.ruleFailures`. The basic `RuleEngine.run()` (used by the fix command) still swallows errors silently.
 - Security rules are grouped in `src/rules/builtin/security.ts`; most other rules are one file per rule.
 - Scoring uses diminishing penalties in `src/core/scorer.ts`:
   - base penalties: high = 15, medium = 8, low = 3, info = 0
@@ -154,7 +156,7 @@ Important current behavior:
 - `src/parsers/ast.ts` also computes function-level metrics such as cyclomatic complexity, cognitive complexity, line count, nesting depth, and param count.
 - Arrow functions derive their name from the parent `VariableDeclarator` node when available.
 - There is a small in-memory AST cache in `src/parsers/ast.ts`; if parse-sensitive tests behave oddly, remember results may be cached by file path + content hash.
-- `src/analyzers/baseline.ts` computes a **project statistics baseline** (averages and P90 values across project files). This is not a CI-style "new vs existing findings" baseline system.
+- `src/analyzers/baseline.ts` computes a **project statistics baseline** (averages and P90 values across project files). CI-style baseline comparison (new vs existing findings) is handled separately by `ScanEngine` via `--baseline` and `loadBaseline()` in `src/core/engine.ts`.
 
 ## Fix pipeline
 
@@ -272,8 +274,7 @@ Also check:
 ## Known implementation gaps and easy-to-miss gotchas
 
 - `report` is currently just another live scan command (`src/cli/commands/report.ts`); it does not read saved artifacts or historical reports.
-- Config supports `include` / `exclude` fields (`src/types/config.ts`, `src/core/config.ts`), but current scan execution in `src/core/engine.ts` is still driven by diff/files selection and does not centrally enforce those globs across scan modes.
-- `RuleEngine.run()` in `src/rules/engine.ts` currently swallows rule exceptions silently. Missing findings may be caused by rule failures with no visible diagnostics.
+- The scan pipeline uses `runWithDiagnostics()` to capture rule exceptions into `toolHealth.ruleFailures`. However, the fix command still uses the basic `RuleEngine.run()` which swallows errors silently — missing auto-fixes may be caused by unreported rule failures.
 - `detection.enabled` / `detection.show-probability` exist in config types and defaults, but there is no implemented AI-probability analysis pipeline yet; treat these as reserved/roadmap fields.
 - `src/analyzers/baseline.ts` is a project statistics baseline helper, not a persisted baseline/new-findings comparison system for CI.
 - JSON output is currently just `JSON.stringify(report, null, 2)` in `src/cli/output/json.ts`; there is no separate schema adapter layer.

@@ -81,6 +81,21 @@ CodeTrust evaluates code across five dimensions, weighted into a total score (0-
 | Coverage | 15% | Test file coverage |
 | Style | 10% | Naming consistency |
 
+### Scoring Model
+
+Each issue deducts points based on severity, with **diminishing penalties** for repeated issues of the same severity:
+
+| Severity | Base Penalty | Diminishing Factor |
+|----------|-------------|-------------------|
+| high | 15 | × 0.7 per repeat |
+| medium | 8 | × 0.7 per repeat |
+| low | 3 | × 0.7 per repeat |
+| info | 0 | — |
+
+For example, 3 high-severity issues deduct 15 + 10.5 + 7.35 = 32.85 (not 45). This prevents a single rule category from dominating the score unfairly.
+
+Each issue is identified by a **content-hash fingerprint** (SHA256 of rule ID + file path + code snippet), making findings stable across unrelated line shifts.
+
 ### Grades
 
 | Score | Grade | Meaning |
